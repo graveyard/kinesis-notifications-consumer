@@ -12,12 +12,9 @@ $(GOPATH)/bin/glide:
 
 all: build test
 
-#test: $(PKGS)
-#$(PKGS): golang-test-all-deps
-#	$(call golang-test-all,$@)
-
-test:
-	@echo "No Tests"
+test: $(PKGS)
+$(PKGS): golang-test-all-deps
+	$(call golang-test-all,$@)
 
 build:
 # disable CGO and link completely statically (this is to enable us to run in containers that don't use glibc)

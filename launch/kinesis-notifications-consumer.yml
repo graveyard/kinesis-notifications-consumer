@@ -1,6 +1,12 @@
 run:
   type: docker
-env: []
+env:
+  - DEPLOY_ENV
+  - MINIMUM_TIMESTAMP
+  - RATELIMIT_CONCURRENCY
+  - SLACK_HOOK_URL
+  - SLACK_RETRY_LIMIT
+  - SLACK_TIMEOUT
 resources:
   cpu: 0.1
   max_mem: 0.1
