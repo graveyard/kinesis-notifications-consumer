@@ -1,17 +1,15 @@
 package: github.com/Clever/kinesis-notifications-consumer
 import:
+- package: github.com/Clever/amazon-kinesis-client-go
+  subpackages:
+  - batchconsumer
+  - decode
 - package: golang.org/x/time
   subpackages:
   - rate
-- package: github.com/Clever/kinesis-to-firehose
-  subpackages:
-  - decode
-- package: github.com/Clever/amazon-kinesis-client-go
-  version: a9192d6ab9f0606a2186dbf938c9e43eb66ca30d
-  subpackages:
-  - batchconsumer
 testImport:
 - package: github.com/jarcoal/httpmock
 - package: github.com/stretchr/testify
+  version: ~1.1.4
   subpackages:
   - assert

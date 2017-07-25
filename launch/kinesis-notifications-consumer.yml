@@ -13,4 +13,4 @@ resources:
 shepherds:
 - "ryan.burns@clever.com"
 expose: []
-team: "TODO"
+team: "eng-infra"

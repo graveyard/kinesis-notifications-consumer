@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,28 +19,72 @@ func TestEncodeMessage(t *testing.T) {
 
 	// Nominal case
 	input := map[string]interface{}{
-		"rawlog":          "slack message goes here",
-		"_kvmeta.type":    "notifications",
-		"_kvmeta.channel": "#test",
-		"_kvmeta.message": "Hello World",
-		"_kvmeta.user":    "testbot",
-		"_kvmeta.icon":    ":bot:",
+		"rawlog": "slack message goes here",
+		"_kvmeta": map[string]interface{}{
+			"routes": []map[string]interface{}{
+				map[string]interface{}{
+					"type":    "notifications",
+					"channel": "#test",
+					"message": "Hello World",
+					"user":    "testbot",
+					"icon":    ":bot:",
+				},
+			},
+		},
 	}
-	expected := slackMessage{
+	expectedTag, err := json.Marshal(slackTag{
 		Channel:  "#test",
-		Text:     "Hello World",
 		Username: "testbot",
 		Icon:     ":bot:",
-	}
+	})
+	assert.NoError(t, err)
+
 	output, tags, err := sender.encodeMessage(input)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(tags))
-	assert.Equal(t, "#test", tags[0])
+	assert.Equal(t, string(expectedTag), tags[0])
+	assert.Equal(t, "Hello World", string(output))
 
-	outputMessage := slackMessage{}
-	err = json.Unmarshal(output, &outputMessage)
+	// Multiple routes
+	input = map[string]interface{}{
+		"rawlog": "slack message goes here",
+		"_kvmeta": map[string]interface{}{
+			"routes": []map[string]interface{}{
+				map[string]interface{}{
+					"type":    "notifications",
+					"channel": "#test",
+					"message": "Hello World",
+					"user":    "testbot",
+					"icon":    ":bot:",
+				},
+				map[string]interface{}{
+					"type":    "notifications",
+					"channel": "#test2",
+					"message": "Hello World",
+					"user":    "testbot2",
+					"icon":    ":bot2:",
+				},
+			},
+		},
+	}
+	expectedTagA, err := json.Marshal(slackTag{
+		Channel:  "#test",
+		Username: "testbot",
+		Icon:     ":bot:",
+	})
 	assert.NoError(t, err)
-	assert.Equal(t, expected, outputMessage)
+	expectedTagB, err := json.Marshal(slackTag{
+		Channel:  "#test2",
+		Username: "testbot2",
+		Icon:     ":bot2:",
+	})
+
+	output, tags, err = sender.encodeMessage(input)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(tags))
+	assert.Equal(t, string(expectedTagA), tags[0])
+	assert.Equal(t, string(expectedTagB), tags[1])
+	assert.Equal(t, "Hello World", string(output))
 
 	// Missing the raw log
 	input = map[string]interface{}{
@@ -55,41 +100,48 @@ func TestEncodeMessage(t *testing.T) {
 
 	// Not a notification
 	input = map[string]interface{}{
-		"rawlog":          "slack message goes here",
-		"_kvmeta.type":    "metric",
-		"_kvmeta.channel": "#test",
-		"_kvmeta.message": "Hello World",
-		"_kvmeta.user":    "testbot",
-		"_kvmeta.icon":    ":bot:",
+		"rawlog": "slack message goes here",
+		"_kvmeta": map[string]interface{}{
+			"routes": []map[string]interface{}{
+				map[string]interface{}{
+					"type":    "metric",
+					"channel": "#test",
+					"message": "Hello World",
+					"user":    "testbot",
+					"icon":    ":bot:",
+				},
+			},
+		},
 	}
 	output, tags, err = sender.encodeMessage(input)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "intentionally skipped")
+}
 
-	// Missing a required field
-	input = map[string]interface{}{
-		"rawlog":          "slack message goes here",
-		"_kvmeta.type":    "notifications",
-		"_kvmeta.message": "Hello World",
-		"_kvmeta.user":    "testbot",
-		"_kvmeta.icon":    ":bot:",
-	}
-	output, tags, err = sender.encodeMessage(input)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "not found")
+// TestEncodeMessageMaxSize tests that encodeMessage() discards messages that
+// are too long
+func TestEncodeMessageMaxSize(t *testing.T) {
+	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
 
-	// Empty required field
-	input = map[string]interface{}{
-		"rawlog":          "slack message goes here",
-		"_kvmeta.type":    "notifications",
-		"_kvmeta.channel": "#test",
-		"_kvmeta.message": "",
-		"_kvmeta.user":    "testbot",
-		"_kvmeta.icon":    ":bot:",
+	// Nominal case
+	input := map[string]interface{}{
+		"rawlog": "slack message goes here",
+		"_kvmeta": map[string]interface{}{
+			"routes": []map[string]interface{}{
+				map[string]interface{}{
+					"type":    "notifications",
+					"channel": "#test",
+					"message": strings.Repeat("#", MaxMessageLength+1),
+					"user":    "testbot",
+					"icon":    ":bot:",
+				},
+			},
+		},
 	}
-	output, tags, err = sender.encodeMessage(input)
+
+	_, _, err := sender.encodeMessage(input)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "is empty")
+	assert.Contains(t, err.Error(), "exceeds maximum length")
 }
 
 // TestSendBatch tests the nominal expected behavior of SendBatch()
@@ -98,36 +150,25 @@ func TestSendBatch(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	// a fake batch of slack messages
-	msgA := slackMessage{
+	tagA := slackTag{
 		Channel:  "#test",
-		Text:     "All your schools are belong to us",
 		Username: "Tyler",
 		Icon:     ":tyler:",
 	}
-	msgB := slackMessage{
-		Channel:  "#test",
-		Text:     "All your deploys are belong to us",
-		Username: "Xavi",
-		Icon:     ":noah:",
-	}
-	msgC := slackMessage{
-		Channel:  "#test",
-		Text:     "All your dogs are belong to us",
-		Username: "Frankie",
-		Icon:     ":leo:",
+	encTagA, _ := json.Marshal(tagA)
+
+	msgs := []string{
+		"All your schools are belong to us",
+		"All your apps are belong to us",
+		"All your monies are belong to us",
 	}
 
-	expectedMessages := map[string]slackMessage{
-		"Tyler":   msgA,
-		"Xavi":    msgB,
-		"Frankie": msgC,
+	batch := [][]byte{
+		[]byte(msgs[0]),
+		[]byte(msgs[1]),
+		[]byte(msgs[2]),
 	}
-
-	batch := [][]byte{}
-	for _, msg := range expectedMessages {
-		encodedMsg, _ := json.Marshal(msg)
-		batch = append(batch, encodedMsg)
-	}
+	expectedMessage := strings.Join(msgs, "\n")
 
 	messagesReceived := 0
 	httpmock.RegisterResponder("POST", mockURL,
@@ -141,9 +182,10 @@ func TestSendBatch(t *testing.T) {
 			err := decoder.Decode(&msg)
 			assert.NoError(t, err)
 
-			expected, ok := expectedMessages[msg.Username]
-			assert.True(t, ok)
-			assert.Equal(t, expected, msg)
+			assert.Equal(t, expectedMessage, msg.Text)
+			assert.Equal(t, tagA.Channel, msg.Channel)
+			assert.Equal(t, tagA.Icon, msg.Icon)
+			assert.Equal(t, tagA.Username, msg.Username)
 
 			resp, err := httpmock.NewJsonResponse(200, nil)
 			if err != nil {
@@ -155,9 +197,9 @@ func TestSendBatch(t *testing.T) {
 	)
 
 	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
-	err := sender.SendBatch(batch, "#test")
+	err := sender.SendBatch(batch, string(encTagA))
 	assert.NoError(t, err)
-	assert.Equal(t, 3, messagesReceived)
+	assert.Equal(t, 1, messagesReceived)
 }
 
 // TestSendBatchRetryLimit tests the retry limiting code in SendBatch
@@ -177,17 +219,16 @@ func TestSendBatchRetryLimit(t *testing.T) {
 		},
 	)
 
-	msg, _ := json.Marshal(slackMessage{
+	tag, _ := json.Marshal(slackTag{
 		Channel:  "#flares",
-		Text:     "slack is down",
 		Username: "slackbot",
 		Icon:     ":slack-hash:",
 	})
 	batch := [][]byte{
-		msg,
+		[]byte("slack is down"),
 	}
 	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
-	err := sender.SendBatch(batch, "#test")
+	err := sender.SendBatch(batch, string(tag))
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Retry limit")
 	assert.Equal(t, 4, messagesReceived)
@@ -211,21 +252,20 @@ func TestSendBatchInternalRateLimit(t *testing.T) {
 		},
 	)
 
-	msg, _ := json.Marshal(slackMessage{
+	tag, _ := json.Marshal(slackTag{
 		Channel:  "#groundhogs",
-		Text:     "Hello again",
 		Username: "Phil",
 		Icon:     ":bill-murray:",
 	})
 	batch := [][]byte{
-		msg,
-		msg,
-		msg,
-		msg,
+		[]byte("Hello Again"),
 	}
 	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
-	err := sender.SendBatch(batch, "#groundhogs")
-	assert.NoError(t, err)
+
+	for x := 0; x < 4; x++ {
+		err := sender.SendBatch(batch, string(tag))
+		assert.NoError(t, err)
+	}
 
 	// 4 messages sent (at a burst limit of 1 per sec) should mean at least
 	// 3 secs have passed
@@ -257,19 +297,20 @@ func TestSendBatchRateLimitResponse(t *testing.T) {
 		},
 	)
 
-	msg, _ := json.Marshal(slackMessage{
+	tag, _ := json.Marshal(slackTag{
 		Channel:  "#groundhogs",
-		Text:     "Hello again",
 		Username: "Phil",
 		Icon:     ":bill-murray:",
 	})
 	batch := [][]byte{
-		msg,
-		msg,
+		[]byte("Hello again"),
 	}
 	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
-	err := sender.SendBatch(batch, "#groundhogs")
-	assert.NoError(t, err)
+
+	for x := 0; x < 2; x++ {
+		err := sender.SendBatch(batch, string(tag))
+		assert.NoError(t, err)
+	}
 
 	// 2 messages sent with the first hitting a 3 second retry delay should mean at least
 	// 3 secs have passed and there should be 3 calls to slack
@@ -301,26 +342,25 @@ func TestSendBatchError(t *testing.T) {
 		},
 	)
 
-	msg, _ := json.Marshal(slackMessage{
+	tag, _ := json.Marshal(slackTag{
 		Channel:  "#monopoly",
-		Text:     "Do not pass Go",
 		Username: "Player1",
 		Icon:     ":top-hat:",
 	})
 	batch := [][]byte{
-		msg,
+		[]byte("Do not pass Go"),
 	}
 
 	// Expect a 500 first (this will be retried)
 	sender := newSlackOutput("test", mockURL, 0, 1, 1, 1)
-	err := sender.SendBatch(batch, "#monopoly")
+	err := sender.SendBatch(batch, string(tag))
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "500")
 	assert.Equal(t, 2, messagesReceived)
 
 	// Expects a 404 (no retries)
 	sender = newSlackOutput("test", mockURL, 0, 1, 1, 3)
-	err = sender.SendBatch(batch, "#monopoly")
+	err = sender.SendBatch(batch, string(tag))
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "404")
 	assert.Equal(t, 3, messagesReceived)

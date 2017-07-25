@@ -13,15 +13,19 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	kbc "github.com/Clever/amazon-kinesis-client-go/batchconsumer"
-	"github.com/Clever/kinesis-to-firehose/decode"
+	"github.com/Clever/amazon-kinesis-client-go/decode"
 	"golang.org/x/time/rate"
 )
 
 // Slack is generally limited to 1 msg per second per hook
 const MsgsPerSecond = 1
+
+// Slack limits messages to 4k in length
+const MaxMessageLength = 4000
 
 type slackOutput struct {
 	slackURL             string
@@ -33,89 +37,68 @@ type slackOutput struct {
 	retryLimit           int
 }
 
-type slackMessage struct {
+type slackTag struct {
 	Channel  string `json:"channel"`
-	Text     string `json:"text"`
 	Icon     string `json:"icon_emoji,omitempty"`
 	Username string `json:"username,omitempty"`
 }
 
-func (s *slackOutput) fetchField(fields map[string]interface{}, key string) (string, error) {
-	rawlog, ok := fields["rawlog"]
-	if !ok {
-		return "", fmt.Errorf("`rawlog` missing in notification: '%+v'", fields)
-	}
-	value, ok := fields[key]
-	if !ok {
-		return "", fmt.Errorf("`%s` field not found in notification: '%s'", key, rawlog.(string))
-	}
-	return value.(string), nil
-}
-
-func (s *slackOutput) fetchRequiredField(fields map[string]interface{}, key string) (string, error) {
-	value, err := s.fetchField(fields, key)
-	if err != nil {
-		return "", err
-	}
-
-	if value == "" {
-		return "", fmt.Errorf("`%s` field is empty in notification: '%s'", key, fields["rawlog"])
-	}
-	return value, nil
+type slackMessage struct {
+	Text string `json:"text"`
+	slackTag
 }
 
 func (s *slackOutput) encodeMessage(fields map[string]interface{}) ([]byte, []string, error) {
 	// Skip all non-notification messages
-	msgType, err := s.fetchField(fields, "_kvmeta.type")
-	if err != nil || msgType != "notifications" {
-		return nil, []string{}, kbc.ErrMessageIgnored
+	kvmeta := decode.ExtractKVMeta(fields)
+	routes := kvmeta.Routes.NotificationRoutes()
+	if len(routes) <= 0 {
+		return nil, nil, kbc.ErrMessageIgnored
 	}
 
-	// Get all of the fields used in a slack message
-	channel, err := s.fetchRequiredField(fields, "_kvmeta.channel")
-	if err != nil {
-		return nil, []string{}, err
+	// Assemble tags and message. This assumes that the only variability in the routes
+	// are the channel, user, and icon
+	tags := []string{}
+	var text string
+	for _, route := range routes {
+		// Last message wins (they should all be the same)
+		text = route.Message
+
+		// Tag each message by channel, user, and icon
+		encTag, err := json.Marshal(slackTag{
+			Channel:  route.Channel,
+			Username: route.User,
+			Icon:     route.Icon,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+		tags = append(tags, string(encTag))
 	}
 
-	text, err := s.fetchRequiredField(fields, "_kvmeta.message")
-	if err != nil {
-		return nil, []string{}, err
+	// Make sure individual messages are not too long
+	if len(text) > MaxMessageLength {
+		return nil, nil, fmt.Errorf("Message length exceeds maximum length allowed by slack: %s", text)
 	}
 
-	icon, err := s.fetchField(fields, "_kvmeta.icon")
-	if err != nil {
-		return nil, []string{}, err
-	}
-
-	user, err := s.fetchField(fields, "_kvmeta.user")
-	if err != nil {
-		return nil, []string{}, err
-	}
-
-	// Package up the slack message
-	msg := slackMessage{
-		Channel:  channel,
-		Text:     text,
-		Icon:     icon,
-		Username: user,
-	}
-
-	slackMsg, err := json.Marshal(msg)
-	if err != nil {
-		return nil, []string{}, err
-	}
-
-	return slackMsg, []string{channel}, nil
+	return []byte(text), tags, nil
 }
 
-func (s *slackOutput) sendMessage(msg []byte, tag string) error {
+func (s *slackOutput) sendMessage(msg slackMessage) error {
 	lastError := fmt.Errorf("Unknown error in output")
+
+	// Encode the message to json
+	msgStr, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("Failed to Marshall slack message %+v: %s", msg, err.Error())
+	}
+
 	for x := 0; x <= s.retryLimit; x++ {
 		// Don't send too quickly
-		s.rateLimiter.Wait(context.TODO())
+		s.rateLimiter.Wait(context.Background())
 
 		// send the message to slack
-		resp, err := s.client.Post(s.slackURL, "application/json", bytes.NewReader(msg))
+		resp, err := s.client.Post(s.slackURL, "application/json", bytes.NewReader(msgStr))
 		if err != nil {
 			if err, ok := err.(net.Error); ok && err.Timeout() {
 				// retry timeouts
@@ -123,7 +106,7 @@ func (s *slackOutput) sendMessage(msg []byte, tag string) error {
 				continue
 			}
 			// Don't retry other errors
-			return fmt.Errorf("Failed to post to `%s`. Message: %s, Error: %s", tag, string(msg), err.Error())
+			return fmt.Errorf("Failed to post slack message: %+v, Error: %s", msg, err.Error())
 		}
 		defer resp.Body.Close()
 
@@ -153,18 +136,18 @@ func (s *slackOutput) sendMessage(msg []byte, tag string) error {
 				}
 			}
 			time.Sleep(time.Duration(delayTime) * time.Second)
-			lastError = fmt.Errorf("Failed to post to `%s`. Message: `%s`. Error: Exceeded rate limit", tag, string(msg))
+			lastError = fmt.Errorf("Failed to post slack message: %+v. Error: Exceeded rate limit", msg)
 		} else if resp.StatusCode >= 500 && resp.StatusCode < 600 {
 			// A server side error occurred. Retry
-			lastError = fmt.Errorf("Failed to post to `%s`. Message: `%s`. Error: Server returned '%d': %s", tag, string(msg), resp.StatusCode, bodyString)
+			lastError = fmt.Errorf("Failed to post slack message: %+v. Error: Server returned '%d': %s", msg, resp.StatusCode, bodyString)
 		} else if resp.StatusCode >= 400 && resp.StatusCode < 500 {
 			// Don't retry 400s
-			return fmt.Errorf("Failed to post to `%s`. Message: `%s`. Error: Server returned '%d': %s", tag, string(msg), resp.StatusCode, bodyString)
+			return fmt.Errorf("Failed to post slack message: %+v. Error: Server returned '%d': %s", msg, resp.StatusCode, bodyString)
 		}
 	}
 
 	// Retry attempts exceed
-	return fmt.Errorf("Retry limit `%d` exceeded posting to `%s`. Message: `%s`. Error: %s", s.retryLimit, tag, string(msg), lastError)
+	return fmt.Errorf("Retry limit `%d` exceeded posting slack message: %+v. Error: %s", s.retryLimit, msg, lastError)
 }
 
 // ProcessMessage is called once per log to parse the log line and then reformat it
@@ -182,23 +165,32 @@ func (s *slackOutput) ProcessMessage(rawmsg []byte) (msg []byte, tags []string, 
 
 // SendBatch is called once per batch per tag and delivers the message to slack
 func (s *slackOutput) SendBatch(batch [][]byte, tag string) error {
-	failedMessages := [][]byte{}
-	var lastError error
-
-	for _, msg := range batch {
-		err := s.sendMessage(msg, tag)
-		if err != nil {
-			failedMessages = append(failedMessages, msg)
-			lastError = err
-		}
+	// Decode the tag
+	msgTag := slackTag{}
+	err := json.Unmarshal([]byte(tag), &msgTag)
+	if err != nil {
+		return fmt.Errorf("Failed to decode message tag '%s': %s", tag, err.Error())
 	}
 
-	if len(failedMessages) > 0 {
+	// Messages are batched by channel,user, & icon so just send one slack message
+	// per batch with each message on a new line
+	// limit total message length by size
+	messages := []string{}
+	for _, b := range batch {
+		messages = append(messages, string(b))
+	}
+	message := slackMessage{
+		Text:     strings.Join(messages, "\n"),
+		slackTag: msgTag,
+	}
+	err = s.sendMessage(message)
+	if err != nil {
 		return kbc.PartialSendBatchError{
-			FailedMessages: failedMessages,
-			ErrMessage:     lastError.Error(),
+			FailedMessages: batch,
+			ErrMessage:     err.Error(),
 		}
 	}
+
 	return nil
 }
 
@@ -267,6 +259,7 @@ func main() {
 		LogFile:    "/tmp/kinesis-notifications-consumer-" + time.Now().Format(time.RFC3339),
 		DeployEnv:  env,
 		BatchCount: 1,
+		BatchSize:  MaxMessageLength,
 	}
 	output := newSlackOutput(env, slackURL, minTimestamp, ratelimitConcurrency, timeout, retryLimit)
 	consumer := kbc.NewBatchConsumer(config, output)

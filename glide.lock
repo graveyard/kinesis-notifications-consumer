@@ -1,37 +1,20 @@
-hash: 6fd89b6a53deb8185b7683881f1c135c3bff081f645f1d7c59d93444861202ee
-updated: 2017-07-19T08:45:45.473486816-07:00
+hash: f72b9fe100a8225af5cc760acb840e9e14408474ae7875a2b458cabf8d06e48d
+updated: 2017-07-25T10:19:18.627159372-07:00
 imports:
 - name: github.com/Clever/amazon-kinesis-client-go
-  version: a9192d6ab9f0606a2186dbf938c9e43eb66ca30d
+  version: 4c6d8453efd75d4140edc73959da735f6e72ef98
   subpackages:
   - batchconsumer
   - batchconsumer/batcher
+  - decode
   - kcl
   - splitter
-- name: github.com/Clever/kinesis-to-firehose
-  version: 13c8066f7bbedfe40cd10edf468e79b007ca128a
-  subpackages:
-  - decode
 - name: github.com/Clever/syslogparser
   version: 93ab95f7ff16c9ef1f2d09bc37c0a0c31bad98ea
   subpackages:
   - rfc3164
-- name: github.com/davecgh/go-spew
-  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
-  subpackages:
-  - spew
-- name: github.com/jarcoal/httpmock
-  version: 145b10d659265440f062c31ea15326166bae56ee
 - name: github.com/jeromer/syslogparser
   version: 0e4ae46ea3f08de351074b643d649d5d00661a3c
-- name: github.com/pmezard/go-difflib
-  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
-  subpackages:
-  - difflib
-- name: github.com/stretchr/testify
-  version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
-  subpackages:
-  - assert
 - name: github.com/xeipuuv/gojsonpointer
   version: 6fe8760cad3569743d51ddbb243b26f8456742dc
 - name: github.com/xeipuuv/gojsonreference
@@ -53,4 +36,18 @@ imports:
   - router
 - name: gopkg.in/yaml.v2
   version: a3f3340b5840cee44f372bddb5880fcbc419b46a
-testImports: []
+testImports:
+- name: github.com/davecgh/go-spew
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
+  subpackages:
+  - spew
+- name: github.com/jarcoal/httpmock
+  version: 145b10d659265440f062c31ea15326166bae56ee
+- name: github.com/pmezard/go-difflib
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  subpackages:
+  - difflib
+- name: github.com/stretchr/testify
+  version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
+  subpackages:
+  - assert
