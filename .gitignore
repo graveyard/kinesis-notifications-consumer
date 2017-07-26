@@ -10,3 +10,5 @@
 # local
 kinesis-notifications-consumer
 vendor/
+jars/
+consumer.properties

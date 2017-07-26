@@ -1,7 +1,11 @@
-FROM gliderlabs/alpine:3.3
+FROM openjdk:7-jre
 
-RUN apk-install ca-certificates
+# install `make`
+RUN apt-get -y update && apt-get install -y -q build-essential
 
-COPY kinesis-notifications-consumer /bin/kinesis-notifications-consumer
+ADD jars jars
+ADD consumer.properties .
+ADD run_kcl.sh .
+ADD kinesis-notifications-consumer kinesis-notifications-consumer
 
-ENTRYPOINT ["/bin/kinesis-notifications-consumer"]
+ENTRYPOINT ["/bin/bash", "./run_kcl.sh"]
