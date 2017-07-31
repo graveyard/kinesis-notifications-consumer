@@ -5,41 +5,40 @@ include golang.mk
 SHELL := /bin/bash
 JAR_DIR := jars
 PKGS = $(shell GO15VENDOREXPERIMENT=1 go list ./... | grep -v "vendor/")
-BINARY_NAME := "kinesis-notifications-consumer"
+BINARY_NAME := kinesis-notifications-consumer
 $(eval $(call golang-version-check,1.8))
 
-URL_PREFIX := http://search.maven.org/remotecontent?filepath=
+TMP_DIR := /tmp/kinesis-notifications-consumer-jars
+JAR_DIR := ./jars
+KCL_VERSION := 1.7.6
 
-# this list lifted from https://github.com/awslabs/amazon-kinesis-client-python/blob/fb49c6390c0593fbcf81d6c34c5245726c15b2f3/setup.py#L60
-JARS_TO_DOWNLOAD := $(addprefix $(JAR_DIR)/,com/amazonaws/amazon-kinesis-client/1.7.2/amazon-kinesis-client-1.7.2.jar \
-com/amazonaws/aws-java-sdk-dynamodb/1.11.14/aws-java-sdk-dynamodb-1.11.14.jar \
-com/amazonaws/aws-java-sdk-s3/1.11.14/aws-java-sdk-s3-1.11.14.jar \
-com/amazonaws/aws-java-sdk-kms/1.11.14/aws-java-sdk-kms-1.11.14.jar \
-com/amazonaws/aws-java-sdk-core/1.11.14/aws-java-sdk-core-1.11.14.jar \
-commons-logging/commons-logging/1.1.3/commons-logging-1.1.3.jar \
-org/apache/httpcomponents/httpclient/4.5.2/httpclient-4.5.2.jar \
-org/apache/httpcomponents/httpcore/4.4.4/httpcore-4.4.4.jar \
-commons-codec/commons-codec/1.9/commons-codec-1.9.jar \
-com/fasterxml/jackson/core/jackson-databind/2.6.6/jackson-databind-2.6.6.jar \
-com/fasterxml/jackson/core/jackson-annotations/2.6.0/jackson-annotations-2.6.0.jar \
-com/fasterxml/jackson/core/jackson-core/2.6.6/jackson-core-2.6.6.jar \
-com/fasterxml/jackson/dataformat/jackson-dataformat-cbor/2.6.6/jackson-dataformat-cbor-2.6.6.jar \
-joda-time/joda-time/2.8.1/joda-time-2.8.1.jar \
-com/amazonaws/aws-java-sdk-kinesis/1.11.14/aws-java-sdk-kinesis-1.11.14.jar \
-com/amazonaws/aws-java-sdk-cloudwatch/1.11.14/aws-java-sdk-cloudwatch-1.11.14.jar \
-com/google/guava/guava/18.0/guava-18.0.jar \
-com/google/protobuf/protobuf-java/2.6.1/protobuf-java-2.6.1.jar \
-commons-lang/commons-lang/2.6/commons-lang-2.6.jar)
-
-EMPTY :=
-SPACE := $(EMPTY) $(EMPTY)
-JAVA_CLASS_PATH := $(subst $(SPACE),:,$(JARS_TO_DOWNLOAD))
-
-$(JARS_TO_DOWNLOAD):
-	mkdir -p `dirname $@`
-	curl -s -L -o $@ -O $(URL_PREFIX)`echo $@ | sed 's/$(JAR_DIR)\///g'`
-
-download_jars: $(JARS_TO_DOWNLOAD)
+define POM_XML_FOR_GETTING_DEPENDENT_JARS
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.clever.kinesisconsumers</groupId>
+  <artifactId>$(BINARY_NAME)</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <dependencies>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>amazon-kinesis-client</artifactId>
+      <version>$(KCL_VERSION)</version>
+    </dependency>
+  </dependencies>
+</project>
+endef
+export POM_XML_FOR_GETTING_DEPENDENT_JARS
+download_jars:
+	command -v mvn >/dev/null 2>&1 || { echo >&2 "Maven not installed. Install maven!"; exit 1; }
+	mkdir -p $(JAR_DIR)/ $(TMP_DIR)
+	rm -f $(JAR_DIR)/*
+	echo $$POM_XML_FOR_GETTING_DEPENDENT_JARS > $(TMP_DIR)/pom.xml
+	cd $(TMP_DIR) && mvn dependency:copy-dependencies
+	mv $(TMP_DIR)/target/dependency/* $(JAR_DIR)/
+	# Download the STS jar file for supporting IAM Roles
+	ls $(JAR_DIR)/aws-java-sdk-core-*.jar | sed -e "s/.*-sdk-core-//g" | sed -e "s/\.jar//g" > /tmp/version.txt
+	curl -o $(JAR_DIR)/aws-java-sdk-sts-`cat /tmp/version.txt`.jar http://central.maven.org/maven2/com/amazonaws/aws-java-sdk-sts/`cat /tmp/version.txt`/aws-java-sdk-sts-`cat /tmp/version.txt`.jar
 
 $(GOPATH)/bin/glide:
 	@go get github.com/Masterminds/glide
@@ -60,10 +59,10 @@ install_deps: $(GOPATH)/bin/glide
 
 consumer_properties:
 	cp consumer.properties.template consumer.properties
-	sed -i 's/<STREAM_NAME>/$(KINESIS_STREAM_NAME)/' consumer.properties
-	sed -i 's/<REGION_NAME>/$(KINESIS_AWS_REGION)/' consumer.properties
-	sed -i 's/<APPLICATION_NAME>/$(KINESIS_APPLICATION_NAME)/' consumer.properties
-	sed -i 's/<INITIAL_POSITION>/$(KINESIS_INITIAL_POSITION)/' consumer.properties
+	perl -pi -e 's/<STREAM_NAME>/$(KINESIS_STREAM_NAME)/g' consumer.properties
+	perl -pi -e 's/<REGION_NAME>/$(KINESIS_AWS_REGION)/g' consumer.properties
+	perl -pi -e 's/<APPLICATION_NAME>/$(KINESIS_APPLICATION_NAME)/g' consumer.properties
+	perl -pi -e 's/<INITIAL_POSITION>/$(KINESIS_INITIAL_POSITION)/g' consumer.properties
 
 run_kinesis_consumer: consumer_properties
 	command -v java >/dev/null 2>&1 || { echo >&2 "Java not installed. Install java!"; exit 1; }
@@ -72,5 +71,7 @@ run_kinesis_consumer: consumer_properties
 run: consumer_properties
 	GOOS=linux GOARCH=amd64 make build
 	docker build -t kinesis-notifications-consumer .
-	@docker run -v /tmp:/tmp --env-file=<(echo -e $(_ARKLOC_ENV_FILE)) kinesis-notifications-consumer
-
+	@docker run -v /tmp:/tmp \
+	-v $(AWS_SHARED_CREDENTIALS_FILE):$(AWS_SHARED_CREDENTIALS_FILE) \
+	--env-file=<(echo -e $(_ARKLOC_ENV_FILE)) \
+	kinesis-notifications-consumer
