@@ -1,0 +1,14 @@
+# osx / sshfs
+._*
+.DS_Store
+
+# emacs / vim
+*~
+\#*\#
+.\#*
+
+# local
+kinesis-notifications-consumer
+vendor/
+jars/
+consumer.properties

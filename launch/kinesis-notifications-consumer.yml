@@ -1,0 +1,21 @@
+run:
+  type: docker
+env:
+  - DEPLOY_ENV
+  - KINESIS_APPLICATION_NAME
+  - KINESIS_STREAM_NAME
+  - KINESIS_AWS_REGION
+  - KINESIS_INITIAL_POSITION
+  - MINIMUM_TIMESTAMP
+  - RATELIMIT_CONCURRENCY
+  - SLACK_HOOK_URL
+  - SLACK_RETRY_LIMIT
+  - SLACK_TIMEOUT
+resources:
+  cpu: 0.1
+  max_mem: 0.1
+shepherds:
+- "ryan.burns@clever.com"
+expose: []
+team: "eng-infra"
+use_iam_roles: true
