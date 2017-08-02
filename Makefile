@@ -56,19 +56,7 @@ build:
 install_deps: $(GOPATH)/bin/glide
 	@$(GOPATH)/bin/glide install
 
-
-consumer_properties:
-	cp consumer.properties.template consumer.properties
-	perl -pi -e 's/<STREAM_NAME>/$(KINESIS_STREAM_NAME)/g' consumer.properties
-	perl -pi -e 's/<REGION_NAME>/$(KINESIS_AWS_REGION)/g' consumer.properties
-	perl -pi -e 's/<APPLICATION_NAME>/$(KINESIS_APPLICATION_NAME)/g' consumer.properties
-	perl -pi -e 's/<INITIAL_POSITION>/$(KINESIS_INITIAL_POSITION)/g' consumer.properties
-
-run_kinesis_consumer: consumer_properties
-	command -v java >/dev/null 2>&1 || { echo >&2 "Java not installed. Install java!"; exit 1; }
-	java -cp $(JAVA_CLASS_PATH) com.amazonaws.services.kinesis.multilang.MultiLangDaemon consumer.properties
-
-run: consumer_properties
+run:
 	GOOS=linux GOARCH=amd64 make build
 	docker build -t kinesis-notifications-consumer .
 	@docker run -v /tmp:/tmp \
