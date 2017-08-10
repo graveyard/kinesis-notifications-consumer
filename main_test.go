@@ -68,7 +68,7 @@ func TestEncodeMessage(t *testing.T) {
 	input := map[string]interface{}{
 		"rawlog": log,
 		"_kvmeta": map[string]interface{}{
-			"routes": []map[string]interface{}{
+			"routes": []interface{}{
 				map[string]interface{}{
 					"type":    "notifications",
 					"channel": "#test",
@@ -96,7 +96,7 @@ func TestEncodeMessage(t *testing.T) {
 	input = map[string]interface{}{
 		"rawlog": log,
 		"_kvmeta": map[string]interface{}{
-			"routes": []map[string]interface{}{
+			"routes": []interface{}{
 				map[string]interface{}{
 					"type":    "notifications",
 					"channel": "#test",
@@ -149,7 +149,7 @@ func TestEncodeMessage(t *testing.T) {
 	input = map[string]interface{}{
 		"rawlog": log,
 		"_kvmeta": map[string]interface{}{
-			"routes": []map[string]interface{}{
+			"routes": []interface{}{
 				map[string]interface{}{
 					"type":    "metric",
 					"channel": "#test",
@@ -175,7 +175,7 @@ func TestEncodeMessageMaxSize(t *testing.T) {
 	input := map[string]interface{}{
 		"rawlog": log,
 		"_kvmeta": map[string]interface{}{
-			"routes": []map[string]interface{}{
+			"routes": []interface{}{
 				map[string]interface{}{
 					"type":    "notifications",
 					"channel": "#test",

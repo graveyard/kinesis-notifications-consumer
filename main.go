@@ -302,7 +302,6 @@ func main() {
 	// Slack doesn't support batching, so set the batch size to 1
 	config := kbc.Config{
 		LogFile:    "/tmp/kinesis-notifications-consumer-" + time.Now().Format(time.RFC3339),
-		DeployEnv:  env,
 		BatchCount: 1,
 		BatchSize:  MaxMessageLength,
 	}
