@@ -1,8 +1,8 @@
-hash: f72b9fe100a8225af5cc760acb840e9e14408474ae7875a2b458cabf8d06e48d
-updated: 2017-07-25T10:19:18.627159372-07:00
+hash: c7c525cf0027d1131a779d426f986f3df8db0999f4d2ea836f30248578c94c8b
+updated: 2017-08-10T15:22:36.161517792-07:00
 imports:
 - name: github.com/Clever/amazon-kinesis-client-go
-  version: 4c6d8453efd75d4140edc73959da735f6e72ef98
+  version: 375e4d1147fec89a5078b6586f28a19954d1ef4b
   subpackages:
   - batchconsumer
   - batchconsumer/batcher
@@ -20,9 +20,9 @@ imports:
 - name: github.com/xeipuuv/gojsonreference
   version: e02fc20de94c78484cd5ffb007f8af96be030a45
 - name: github.com/xeipuuv/gojsonschema
-  version: ff0417f4272e480246b4507459b3f6ae721a87ac
+  version: 702b404897d4364af44dc8dcabc9815947942325
 - name: golang.org/x/net
-  version: b336a971b799939dd16ae9b1df8334cb8b977c4d
+  version: 5602c733f70afc6dcec6766be0d5034d4c4f14de
   subpackages:
   - context
 - name: golang.org/x/time
@@ -35,7 +35,7 @@ imports:
   - logger
   - router
 - name: gopkg.in/yaml.v2
-  version: a3f3340b5840cee44f372bddb5880fcbc419b46a
+  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
 testImports:
 - name: github.com/davecgh/go-spew
   version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9

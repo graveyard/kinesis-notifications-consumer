@@ -48,10 +48,55 @@ type slackMessage struct {
 	slackTag
 }
 
+func (s *slackOutput) globalRoutes(fields map[string]interface{}) []decode.NotificationRoute {
+	// All Production OOM killed messages go to slack
+	content, ok := fields["rawlog"]
+	if !ok || content == "" {
+		// TODO: Should this be an error instead?
+		return []decode.NotificationRoute{}
+	}
+	rawlog := content.(string)
+
+	if !strings.Contains(rawlog, "oom-killer") {
+		return []decode.NotificationRoute{}
+	}
+	program, ok := fields["programname"]
+	if !ok || program != "kernel" {
+		return []decode.NotificationRoute{}
+	}
+
+	env, ok := fields["env"]
+	if !ok || env == "" {
+		return []decode.NotificationRoute{}
+	}
+
+	hostname, ok := fields["hostname"]
+	if !ok || hostname == "" {
+		hostname = "unknown"
+	}
+
+	parts := strings.Split(rawlog, " ")
+	killed := content
+	if len(parts) > 1 {
+		killed = parts[1]
+	}
+
+	return []decode.NotificationRoute{
+		decode.NotificationRoute{
+			Channel:  "#oncall-infra",
+			Icon:     ":mindflayer:",
+			Message:  fmt.Sprintf("<http://go/oom|OOM Killer invoked> %s (%s): %s", hostname, env, killed),
+			User:     "Illithid",
+			RuleName: "oom-killer",
+		},
+	}
+}
+
 func (s *slackOutput) encodeMessage(fields map[string]interface{}) ([]byte, []string, error) {
 	// Skip all non-notification messages
 	kvmeta := decode.ExtractKVMeta(fields)
 	routes := kvmeta.Routes.NotificationRoutes()
+	routes = append(routes, s.globalRoutes(fields)...)
 	if len(routes) <= 0 {
 		return nil, nil, kbc.ErrMessageIgnored
 	}
@@ -257,7 +302,6 @@ func main() {
 	// Slack doesn't support batching, so set the batch size to 1
 	config := kbc.Config{
 		LogFile:    "/tmp/kinesis-notifications-consumer-" + time.Now().Format(time.RFC3339),
-		DeployEnv:  env,
 		BatchCount: 1,
 		BatchSize:  MaxMessageLength,
 	}

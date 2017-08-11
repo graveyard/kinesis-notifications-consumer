@@ -12,7 +12,6 @@ compile:
   - make install_deps
   - make build
   - make download_jars
-  - make consumer_properties
 test:
   override:
   - make test

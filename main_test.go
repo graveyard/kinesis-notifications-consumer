@@ -13,15 +13,62 @@ import (
 
 const mockURL = "https://mockery.com/call/me"
 
+// TestGlobalRoutes tests that the globalRoutes() helper used in encodeMessage() handles all global slack routes
+func TestGlobalRoutes(t *testing.T) {
+	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
+
+	// Nominal Case ( a production oom-killer log)
+	log := "[14214865.119571] myapp invoked oom-killer: gfp_mask=0x24000c0, order=0, oom_score_adj=0"
+	input := map[string]interface{}{
+		"rawlog":      log,
+		"_kvmeta":     map[string]interface{}{},
+		"env":         "production",
+		"hostname":    "ip-1-0-1-0",
+		"programname": "kernel",
+	}
+
+	routes := sender.globalRoutes(input)
+	assert.Equal(t, 1, len(routes))
+	assert.Contains(t, routes[0].Message, "ip-1-0-1-0")
+	assert.Contains(t, routes[0].Message, "production")
+	assert.Contains(t, routes[0].Message, "myapp")
+
+	// Non kernel
+	input = map[string]interface{}{
+		"rawlog":      log,
+		"_kvmeta":     map[string]interface{}{},
+		"env":         "dev",
+		"hostname":    "ip-1-0-1-0",
+		"programname": "other-app",
+	}
+
+	routes = sender.globalRoutes(input)
+	assert.Equal(t, 0, len(routes))
+
+	// Non oom-killer
+	log = "Hello World"
+	input = map[string]interface{}{
+		"rawlog":      log,
+		"_kvmeta":     map[string]interface{}{},
+		"env":         "dev",
+		"hostname":    "ip-1-0-1-0",
+		"programname": "kernel",
+	}
+
+	routes = sender.globalRoutes(input)
+	assert.Equal(t, 0, len(routes))
+}
+
 // TestEncodeMessage tests the encodeMessage() helper used in ProcessMessage()
 func TestEncodeMessage(t *testing.T) {
 	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
 
 	// Nominal case
+	log := "slack message goes here"
 	input := map[string]interface{}{
-		"rawlog": "slack message goes here",
+		"rawlog": log,
 		"_kvmeta": map[string]interface{}{
-			"routes": []map[string]interface{}{
+			"routes": []interface{}{
 				map[string]interface{}{
 					"type":    "notifications",
 					"channel": "#test",
@@ -47,9 +94,9 @@ func TestEncodeMessage(t *testing.T) {
 
 	// Multiple routes
 	input = map[string]interface{}{
-		"rawlog": "slack message goes here",
+		"rawlog": log,
 		"_kvmeta": map[string]interface{}{
-			"routes": []map[string]interface{}{
+			"routes": []interface{}{
 				map[string]interface{}{
 					"type":    "notifications",
 					"channel": "#test",
@@ -100,9 +147,9 @@ func TestEncodeMessage(t *testing.T) {
 
 	// Not a notification
 	input = map[string]interface{}{
-		"rawlog": "slack message goes here",
+		"rawlog": log,
 		"_kvmeta": map[string]interface{}{
-			"routes": []map[string]interface{}{
+			"routes": []interface{}{
 				map[string]interface{}{
 					"type":    "metric",
 					"channel": "#test",
@@ -124,10 +171,11 @@ func TestEncodeMessageMaxSize(t *testing.T) {
 	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
 
 	// Nominal case
+	log := "slack message goes here"
 	input := map[string]interface{}{
-		"rawlog": "slack message goes here",
+		"rawlog": log,
 		"_kvmeta": map[string]interface{}{
-			"routes": []map[string]interface{}{
+			"routes": []interface{}{
 				map[string]interface{}{
 					"type":    "notifications",
 					"channel": "#test",
