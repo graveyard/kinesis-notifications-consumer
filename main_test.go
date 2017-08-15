@@ -59,6 +59,64 @@ func TestOomKillerRoutes(t *testing.T) {
 	assert.Equal(t, 0, len(routes))
 }
 
+// TestNotificationServiceRoutes tests that the globalRoutes() helper used in encodeMessage() handles all global slack routes
+func TestNotificationServiceRoutes(t *testing.T) {
+	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
+
+	// Complete Case (all data fields exist)
+	input := map[string]interface{}{
+		"env": "production",
+		"notification_alert_type": "test_alert",
+		"app_id":                  "app__id",
+		"district_id":             "district__id",
+		"value":                   "314159",
+		"data":                    `{"some":"data","with":"meaning"}`,
+	}
+
+	routes := sender.globalRoutes(input)
+	assert.Equal(t, 1, len(routes))
+	assert.Equal(t, routes[0].Message, `@notorious-bot: {"notification_alert_type":"test_alert","app_id":"app__id","district_id":"district__id","value":"314159","data":{"some":"data","with":"meaning"}}`)
+
+	// Simple Case (just an alert type, no other data)
+	input = map[string]interface{}{
+		"env": "production",
+		"notification_alert_type": "test_alert",
+	}
+
+	routes = sender.globalRoutes(input)
+	assert.Equal(t, 1, len(routes))
+	assert.Equal(t, routes[0].Message, `@notorious-bot: {"notification_alert_type":"test_alert"}`)
+
+	// Works OK if data is just a string.
+	input = map[string]interface{}{
+		"env": "production",
+		"notification_alert_type": "test_alert",
+		"data": "foobar",
+	}
+
+	routes = sender.globalRoutes(input)
+	assert.Equal(t, 1, len(routes))
+	assert.Equal(t, routes[0].Message, `@notorious-bot: {"notification_alert_type":"test_alert","data":"foobar"}`)
+
+	// Non notification-service
+	input = map[string]interface{}{
+		"env":     "production",
+		"message": "hello, world",
+	}
+
+	routes = sender.oomKillerRoutes(input)
+	assert.Equal(t, 0, len(routes))
+
+	// Non production
+	input = map[string]interface{}{
+		"notification_alert_type": "test_alert",
+		"env": "dev",
+	}
+
+	routes = sender.oomKillerRoutes(input)
+	assert.Equal(t, 0, len(routes))
+}
+
 // TestEncodeMessage tests the encodeMessage() helper used in ProcessMessage()
 func TestEncodeMessage(t *testing.T) {
 	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)

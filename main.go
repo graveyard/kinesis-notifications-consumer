@@ -95,9 +95,65 @@ func (s *slackOutput) oomKillerRoutes(fields map[string]interface{}) []decode.No
 	}
 }
 
+func (s *slackOutput) notificationServiceRoutes(fields map[string]interface{}) []decode.NotificationRoute {
+	// All Production Notification-Service messages go to slack, to be prcessed by the notorious-bot
+	alertType, ok := fields["notification_alert_type"]
+	if !ok || alertType == "" {
+		return []decode.NotificationRoute{}
+	}
+
+	var alert struct {
+		AlertType  string      `json:"notification_alert_type,omitempty"`
+		AppID      string      `json:"app_id,omitempty"`
+		DistrictID string      `json:"district_id,omitempty"`
+		Value      string      `json:"value,omitempty"`
+		Data       interface{} `json:"data,omitempty"`
+	}
+
+	rawMsg, err := json.Marshal(fields)
+	if err != nil {
+		return []decode.NotificationRoute{}
+	}
+
+	err = json.Unmarshal(rawMsg, &alert)
+	if err != nil {
+		return []decode.NotificationRoute{}
+	}
+
+	// Convert Data to a proper object
+	if alert.Data != nil && alert.Data != "" {
+		var data map[string]interface{}
+		err = json.Unmarshal([]byte(alert.Data.(string)), &data)
+		// If there's an error, just continue and skip this update
+		if err == nil {
+			alert.Data = data
+		}
+	}
+
+	alertJson, err := json.Marshal(alert)
+	if err != nil {
+		return []decode.NotificationRoute{}
+	}
+
+	return []decode.NotificationRoute{
+		decode.NotificationRoute{
+			Channel:  "#notification-catcher",
+			Icon:     ":notebook:",
+			Message:  fmt.Sprintf("@notorious-bot: %s", alertJson),
+			User:     "notice",
+			RuleName: "notification-service",
+		},
+	}
+}
+
 func (s *slackOutput) globalRoutes(fields map[string]interface{}) []decode.NotificationRoute {
+	routes := []decode.NotificationRoute{}
+
 	// chain and append all global routes here
-	return s.oomKillerRoutes(fields)
+	routes = append(routes, s.oomKillerRoutes(fields)...)
+	routes = append(routes, s.notificationServiceRoutes(fields)...)
+
+	return routes
 }
 
 func (s *slackOutput) encodeMessage(fields map[string]interface{}) ([]byte, []string, error) {
