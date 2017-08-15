@@ -13,8 +13,8 @@ import (
 
 const mockURL = "https://mockery.com/call/me"
 
-// TestGlobalRoutes tests that the globalRoutes() helper used in encodeMessage() handles all global slack routes
-func TestGlobalRoutes(t *testing.T) {
+// TestOOmKillerRoutes tests that the globalRoutes() helper used in encodeMessage() handles all global slack routes
+func TestOomKillerRoutes(t *testing.T) {
 	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
 
 	// Nominal Case ( a production oom-killer log)
@@ -42,7 +42,7 @@ func TestGlobalRoutes(t *testing.T) {
 		"programname": "other-app",
 	}
 
-	routes = sender.globalRoutes(input)
+	routes = sender.oomKillerRoutes(input)
 	assert.Equal(t, 0, len(routes))
 
 	// Non oom-killer
@@ -55,7 +55,7 @@ func TestGlobalRoutes(t *testing.T) {
 		"programname": "kernel",
 	}
 
-	routes = sender.globalRoutes(input)
+	routes = sender.oomKillerRoutes(input)
 	assert.Equal(t, 0, len(routes))
 }
 

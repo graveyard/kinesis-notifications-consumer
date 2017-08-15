@@ -51,7 +51,7 @@ type slackMessage struct {
 	slackTag
 }
 
-func (s *slackOutput) globalRoutes(fields map[string]interface{}) []decode.NotificationRoute {
+func (s *slackOutput) oomKillerRoutes(fields map[string]interface{}) []decode.NotificationRoute {
 	// All Production OOM killed messages go to slack
 	content, ok := fields["rawlog"]
 	if !ok || content == "" {
@@ -93,6 +93,11 @@ func (s *slackOutput) globalRoutes(fields map[string]interface{}) []decode.Notif
 			RuleName: "oom-killer",
 		},
 	}
+}
+
+func (s *slackOutput) globalRoutes(fields map[string]interface{}) []decode.NotificationRoute {
+	// chain and append all global routes here
+	return s.oomKillerRoutes(fields)
 }
 
 func (s *slackOutput) encodeMessage(fields map[string]interface{}) ([]byte, []string, error) {
