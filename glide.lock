@@ -1,11 +1,11 @@
-hash: c7c525cf0027d1131a779d426f986f3df8db0999f4d2ea836f30248578c94c8b
-updated: 2017-08-10T15:22:36.161517792-07:00
+hash: 838f57a35e508696e5b0ea54736380a7d5012179278a7fb80c51160d72668aae
+updated: 2017-08-14T12:23:13.041899275-07:00
 imports:
 - name: github.com/Clever/amazon-kinesis-client-go
   version: 375e4d1147fec89a5078b6586f28a19954d1ef4b
   subpackages:
   - batchconsumer
-  - batchconsumer/batcher
+  - batchconsumer/stats
   - decode
   - kcl
   - splitter

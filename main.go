@@ -19,7 +19,10 @@ import (
 	kbc "github.com/Clever/amazon-kinesis-client-go/batchconsumer"
 	"github.com/Clever/amazon-kinesis-client-go/decode"
 	"golang.org/x/time/rate"
+	"gopkg.in/Clever/kayvee-go.v6/logger"
 )
+
+var lg = logger.New("kinesis-notifications-consumer")
 
 // Slack is generally limited to 1 msg per second per hook
 const MsgsPerSecond = 1
@@ -180,13 +183,16 @@ func (s *slackOutput) sendMessage(msg slackMessage) error {
 					delayTime = delayTime + sec
 				}
 			}
+			lg.InfoD("rate-limited-via-slack", logger.M{"delaying": delayTime})
 			time.Sleep(time.Duration(delayTime) * time.Second)
 			lastError = fmt.Errorf("Failed to post slack message: %+v. Error: Exceeded rate limit", msg)
 		} else if resp.StatusCode >= 500 && resp.StatusCode < 600 {
 			// A server side error occurred. Retry
+			lg.ErrorD("slack-post-failed", logger.M{"status-code": resp.StatusCode, "retry": true})
 			lastError = fmt.Errorf("Failed to post slack message: %+v. Error: Server returned '%d': %s", msg, resp.StatusCode, bodyString)
 		} else if resp.StatusCode >= 400 && resp.StatusCode < 500 {
 			// Don't retry 400s
+			lg.ErrorD("slack-post-failed", logger.M{"status-code": resp.StatusCode, "retry": false})
 			return fmt.Errorf("Failed to post slack message: %+v. Error: Server returned '%d': %s", msg, resp.StatusCode, bodyString)
 		}
 	}

@@ -7,6 +7,10 @@ import:
 - package: golang.org/x/time
   subpackages:
   - rate
+- package: gopkg.in/Clever/kayvee-go.v6
+  version: ^6.6.0
+  subpackages:
+  - logger
 testImport:
 - package: github.com/jarcoal/httpmock
 - package: github.com/stretchr/testify
