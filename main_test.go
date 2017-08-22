@@ -433,7 +433,9 @@ func TestSendBatchInternalRateLimit(t *testing.T) {
 	// 4 messages sent (at a burst limit of 1 per sec) should mean at least
 	// 3 secs have passed
 	delta := messageTimestamps[len(messageTimestamps)-1].Sub(messageTimestamps[0])
-	assert.True(t, delta >= time.Duration(3*time.Second), "Elapsed time '%v' should be more than 3 seconds", delta)
+	assert.True(t,
+		delta+time.Millisecond >= time.Duration(3*time.Second), // Adding fuzz factor
+		"Elapsed time '%v' should be more than 3 seconds", delta)
 }
 
 // TestSendBatchRateLimitResponse tests the response handling when SendBatch is rate limited by Slack
