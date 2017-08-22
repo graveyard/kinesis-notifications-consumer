@@ -371,7 +371,7 @@ func main() {
 		LogFile:       "/tmp/kinesis-notifications-consumer-" + time.Now().Format(time.RFC3339),
 		BatchCount:    1,
 		BatchSize:     MaxMessageLength,
-		ReadRateLimit: 2600,
+		ReadRateLimit: getIntEnv("READ_RATE_LIMIT"),
 	}
 	output := newSlackOutput(env, slackURL, minTimestamp, ratelimitConcurrency, timeout, retryLimit)
 	consumer := kbc.NewBatchConsumer(config, output)
