@@ -262,10 +262,24 @@ func (s *slackOutput) sendMessage(msg slackMessage) error {
 	return fmt.Errorf("Retry limit `%d` exceeded posting slack message: %+v. Error: %s", s.retryLimit, msg, lastError)
 }
 
+var _kvmeta = []byte("_kvmeta")
+var _notifications = []byte("notifications")
+var _oomkill = []byte("oom-killer")
+var _notification_alert_type = []byte("notification_alert_type")
+
+func (s *slackOutput) hasNotifications(rawmsg []byte) bool {
+	return (bytes.Contains(rawmsg, _kvmeta) && bytes.Contains(rawmsg, _notifications)) ||
+		bytes.Contains(rawmsg, _oomkill) || bytes.Contains(rawmsg, _notification_alert_type)
+}
+
 // ProcessMessage is called once per log to parse the log line and then reformat it
 // so that it can be directly used by the output. The returned tags will be passed along
 // with the encoded log to SendBatch()
 func (s *slackOutput) ProcessMessage(rawmsg []byte) (msg []byte, tags []string, err error) {
+	if !s.hasNotifications(rawmsg) {
+		return nil, nil, kbc.ErrMessageIgnored
+	}
+
 	// Parse the log line
 	fields, err := decode.ParseAndEnhance(string(rawmsg), s.deployEnv, false, false, s.minTimestamp)
 	if err != nil {

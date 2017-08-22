@@ -117,6 +117,63 @@ func TestNotificationServiceRoutes(t *testing.T) {
 	assert.Equal(t, 0, len(routes))
 }
 
+func TestHasNotifications(t *testing.T) {
+	assert := assert.New(t)
+
+	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
+
+	tests := []struct {
+		message          string
+		hasNotifications bool
+	}{
+		{
+			message:          "non-kayvee logs are matched",
+			hasNotifications: false,
+		},
+		{
+			message: "[14214865.119571] myapp invoked " +
+				"oom-killer: gfp_mask=0x24000c0, order=0, oom_score_adj=0",
+			hasNotifications: true,
+		},
+		{
+			message: "@notorious-bot: " +
+				`{"notification_alert_type":"test_alert","data":"foobar"}`,
+			hasNotifications: true,
+		},
+		{
+			message: "@notorious-bot: " +
+				`{"notification_alert_type":"test_alert","data":"foobar"}`,
+			hasNotifications: true,
+		},
+		{
+			message: `{"_kvmeta":{routes":[{"channel":"#deploys","icon":":catapult:","message":` +
+				`"hi","rule":"prod-app-scaling","type":"notifications","user":"catapult"}],` +
+				`"team":"eng-infra"}}`,
+			hasNotifications: true,
+		},
+		{
+			message: `{"_kvmeta":{routes":[{"series":"not-a-notification","type":"analytics"}],` +
+				`"team":"eng-infra"}}`,
+			hasNotifications: false,
+		},
+		{
+			message: `{"_kvmeta":{routes":[{"channel":"#deploys","icon":":catapult:","message":` +
+				`"hi","rule":"prod-app-scaling","type":"notifications","user":"catapult"},` +
+				`{"channel":"#multi-notify-message","icon":":catapult:","message":"hi",` +
+				`"rule":"prod-app-scaling","type":"notifications","user":"catapult"}],` +
+				`"team":"eng-infra"}}`,
+			hasNotifications: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Logf("hasNotifications? [%t] %s", test.hasNotifications, test.message)
+
+		assert.Equal(test.hasNotifications, sender.hasNotifications([]byte(test.message)))
+	}
+
+}
+
 // TestEncodeMessage tests the encodeMessage() helper used in ProcessMessage()
 func TestEncodeMessage(t *testing.T) {
 	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
@@ -376,7 +433,9 @@ func TestSendBatchInternalRateLimit(t *testing.T) {
 	// 4 messages sent (at a burst limit of 1 per sec) should mean at least
 	// 3 secs have passed
 	delta := messageTimestamps[len(messageTimestamps)-1].Sub(messageTimestamps[0])
-	assert.True(t, delta >= time.Duration(3*time.Second), "Elapsed time '%v' should be more than 3 seconds", delta)
+	assert.True(t,
+		delta+time.Millisecond >= time.Duration(3*time.Second), // Adding fuzz factor
+		"Elapsed time '%v' should be more than 3 seconds", delta)
 }
 
 // TestSendBatchRateLimitResponse tests the response handling when SendBatch is rate limited by Slack
