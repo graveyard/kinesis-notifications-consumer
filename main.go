@@ -262,11 +262,14 @@ func (s *slackOutput) sendMessage(msg slackMessage) error {
 	return fmt.Errorf("Retry limit `%d` exceeded posting slack message: %+v. Error: %s", s.retryLimit, msg, lastError)
 }
 
-func (s *slackOutput) hasNotifications(rawmsg []byte) bool {
-	var msg = string(rawmsg)
+var _kvmeta = []byte("_kvmeta")
+var _notifications = []byte("notifications")
+var _oomkill = []byte("oom-killer")
+var _notification_alert_type = []byte("notification_alert_type")
 
-	return (strings.Contains(msg, "_kvmeta") && strings.Contains(msg, "notifications")) ||
-		strings.Contains(msg, "oom-killer") || strings.Contains(msg, "notification_alert_type")
+func (s *slackOutput) hasNotifications(rawmsg []byte) bool {
+	return (bytes.Contains(rawmsg, _kvmeta) && bytes.Contains(rawmsg, _notifications)) ||
+		bytes.Contains(rawmsg, _oomkill) || bytes.Contains(rawmsg, _notification_alert_type)
 }
 
 // ProcessMessage is called once per log to parse the log line and then reformat it
