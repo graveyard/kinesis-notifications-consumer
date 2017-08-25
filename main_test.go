@@ -434,7 +434,7 @@ func TestSendBatchInternalRateLimit(t *testing.T) {
 	// 3 secs have passed
 	delta := messageTimestamps[len(messageTimestamps)-1].Sub(messageTimestamps[0])
 	assert.True(t,
-		delta+time.Millisecond >= time.Duration(3*time.Second), // Adding fuzz factor
+		delta+100*time.Millisecond >= time.Duration(3*time.Second), // Adding fuzz factor
 		"Elapsed time '%v' should be more than 3 seconds", delta)
 }
 
