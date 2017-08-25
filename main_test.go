@@ -70,7 +70,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 		"app_id":                  "app__id",
 		"district_id":             "district__id",
 		"value":                   "314159",
-		"data":                    `{"some":"data","with":"meaning"}`,
+		"data":                    map[string]interface{}{"some": "data", "with": "meaning"},
 	}
 
 	routes := sender.globalRoutes(input)
@@ -434,7 +434,7 @@ func TestSendBatchInternalRateLimit(t *testing.T) {
 	// 3 secs have passed
 	delta := messageTimestamps[len(messageTimestamps)-1].Sub(messageTimestamps[0])
 	assert.True(t,
-		delta+time.Millisecond >= time.Duration(3*time.Second), // Adding fuzz factor
+		delta+100*time.Millisecond >= time.Duration(3*time.Second), // Adding fuzz factor
 		"Elapsed time '%v' should be more than 3 seconds", delta)
 }
 
