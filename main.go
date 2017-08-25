@@ -120,16 +120,6 @@ func (s *slackOutput) notificationServiceRoutes(fields map[string]interface{}) [
 		return []decode.NotificationRoute{}
 	}
 
-	// Convert Data to a proper object
-	if alert.Data != nil && alert.Data != "" {
-		var data map[string]interface{}
-		err = json.Unmarshal([]byte(alert.Data.(string)), &data)
-		// If there's an error, just continue and skip this update
-		if err == nil {
-			alert.Data = data
-		}
-	}
-
 	alertJson, err := json.Marshal(alert)
 	if err != nil {
 		return []decode.NotificationRoute{}

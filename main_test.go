@@ -70,7 +70,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 		"app_id":                  "app__id",
 		"district_id":             "district__id",
 		"value":                   "314159",
-		"data":                    `{"some":"data","with":"meaning"}`,
+		"data":                    map[string]interface{}{"some": "data", "with": "meaning"},
 	}
 
 	routes := sender.globalRoutes(input)
