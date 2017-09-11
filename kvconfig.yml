@@ -1,0 +1,11 @@
+routes:
+  unknown-error-alerts:
+    matchers:
+      title: ["stats"]
+    output:
+      type: "alerts"
+      series: "kinesis-consumer.notifications.unknown-error"
+      dimensions: [ ]
+      # 0 for ongoing; 1 for failed; -1 for cancelled
+      value_field: "unknown-error" 
+      stat_type: "counter"

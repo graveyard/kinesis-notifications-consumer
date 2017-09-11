@@ -1,5 +1,5 @@
-hash: 838f57a35e508696e5b0ea54736380a7d5012179278a7fb80c51160d72668aae
-updated: 2017-08-21T15:17:53.471641878Z
+hash: 41e70f2a75c4de557e079d23d25bb2bd3952b8ef9f58de0ec63dda6e3ff79cf5
+updated: 2017-09-11T20:14:36.354732448Z
 imports:
 - name: github.com/Clever/amazon-kinesis-client-go
   version: 7f39898b70c287c2ecdfa9f8d6fec28ed48485e0
@@ -15,6 +15,8 @@ imports:
   - rfc3164
 - name: github.com/jeromer/syslogparser
   version: 0e4ae46ea3f08de351074b643d649d5d00661a3c
+- name: github.com/kardianos/osext
+  version: c2c54e542fb797ad986b31721e1baedf214ca413
 - name: github.com/xeipuuv/gojsonpointer
   version: e0fe6f68307607d540ed8eac07a342c33fa1b54a
 - name: github.com/xeipuuv/gojsonreference
@@ -30,7 +32,7 @@ imports:
   subpackages:
   - rate
 - name: gopkg.in/Clever/kayvee-go.v6
-  version: 096364e316a52652d3493be702d8105d8d01db84
+  version: e6f953eac5b9d8e41dff6587e0ae6d58b50da5c5
   subpackages:
   - logger
   - router

@@ -12,12 +12,14 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
 
 	kbc "github.com/Clever/amazon-kinesis-client-go/batchconsumer"
 	"github.com/Clever/amazon-kinesis-client-go/decode"
+	"github.com/kardianos/osext"
 	"golang.org/x/time/rate"
 	"gopkg.in/Clever/kayvee-go.v6/logger"
 )
@@ -360,6 +362,17 @@ func getIntEnv(key string) int {
 		log.Panicf("Environment variable `%s` is not an integer: %s", key, err.Error())
 	}
 	return value
+}
+
+func init() {
+	dir, err := osext.ExecutableFolder()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = logger.SetGlobalRouting(path.Join(dir, "kvconfig.yml"))
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {

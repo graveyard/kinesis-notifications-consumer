@@ -11,6 +11,7 @@ import:
   version: ^6.6.0
   subpackages:
   - logger
+- package: github.com/kardianos/osext
 testImport:
 - package: github.com/jarcoal/httpmock
 - package: github.com/stretchr/testify
