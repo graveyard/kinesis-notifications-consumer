@@ -364,7 +364,7 @@ func getIntEnv(key string) int {
 	return value
 }
 
-func init() {
+func setupLogRouting() {
 	dir, err := osext.ExecutableFolder()
 	if err != nil {
 		log.Fatal(err)
@@ -382,6 +382,8 @@ func main() {
 	timeout := getIntEnv("SLACK_TIMEOUT")
 	retryLimit := getIntEnv("SLACK_RETRY_LIMIT")
 	slackURL := getEnv("SLACK_HOOK_URL")
+
+	setupLogRouting()
 
 	// Slack doesn't support batching, so set the batch size to 1
 	config := kbc.Config{
