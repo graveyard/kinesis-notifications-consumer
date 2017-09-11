@@ -12,12 +12,14 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
 
 	kbc "github.com/Clever/amazon-kinesis-client-go/batchconsumer"
 	"github.com/Clever/amazon-kinesis-client-go/decode"
+	"github.com/kardianos/osext"
 	"golang.org/x/time/rate"
 	"gopkg.in/Clever/kayvee-go.v6/logger"
 )
@@ -362,6 +364,17 @@ func getIntEnv(key string) int {
 	return value
 }
 
+func setupLogRouting() {
+	dir, err := osext.ExecutableFolder()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = logger.SetGlobalRouting(path.Join(dir, "kvconfig.yml"))
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
 	env := getEnv("DEPLOY_ENV")
 	minTimestamp := getIntEnv("MINIMUM_TIMESTAMP")
@@ -369,6 +382,8 @@ func main() {
 	timeout := getIntEnv("SLACK_TIMEOUT")
 	retryLimit := getIntEnv("SLACK_RETRY_LIMIT")
 	slackURL := getEnv("SLACK_HOOK_URL")
+
+	setupLogRouting()
 
 	// Slack doesn't support batching, so set the batch size to 1
 	config := kbc.Config{
