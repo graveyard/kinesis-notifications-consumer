@@ -108,7 +108,7 @@ func (s *slackOutput) notificationServiceRoutes(fields map[string]interface{}) [
 		AlertType  string      `json:"notification_alert_type,omitempty"`
 		AppID      string      `json:"app_id,omitempty"`
 		DistrictID string      `json:"district_id,omitempty"`
-		Value      string      `json:"value,omitempty"`
+		Value      interface{} `json:"value,omitempty"`
 		Data       interface{} `json:"data,omitempty"`
 	}
 
@@ -120,6 +120,11 @@ func (s *slackOutput) notificationServiceRoutes(fields map[string]interface{}) [
 	err = json.Unmarshal(rawMsg, &alert)
 	if err != nil {
 		return []decode.NotificationRoute{}
+	}
+
+	if alert.Value != nil {
+		// Convert value into a string version, if it's not, for consistency.
+		alert.Value = fmt.Sprintf("%v", alert.Value)
 	}
 
 	alertJson, err := json.Marshal(alert)
