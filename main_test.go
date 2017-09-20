@@ -17,7 +17,7 @@ const mockURL = "https://mockery.com/call/me"
 func TestOomKillerRoutes(t *testing.T) {
 	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
 
-	// Nominal Case ( a production oom-killer log)
+	t.Log("Nominal Case ( a production oom-killer log)")
 	log := "[14214865.119571] myapp invoked oom-killer: gfp_mask=0x24000c0, order=0, oom_score_adj=0"
 	input := map[string]interface{}{
 		"rawlog":      log,
@@ -33,7 +33,7 @@ func TestOomKillerRoutes(t *testing.T) {
 	assert.Contains(t, routes[0].Message, "production")
 	assert.Contains(t, routes[0].Message, "myapp")
 
-	// Non kernel
+	t.Log("Non kernel")
 	input = map[string]interface{}{
 		"rawlog":      log,
 		"_kvmeta":     map[string]interface{}{},
@@ -45,7 +45,7 @@ func TestOomKillerRoutes(t *testing.T) {
 	routes = sender.oomKillerRoutes(input)
 	assert.Equal(t, 0, len(routes))
 
-	// Non oom-killer
+	t.Log("Non oom-killer")
 	log = "Hello World"
 	input = map[string]interface{}{
 		"rawlog":      log,
@@ -63,7 +63,7 @@ func TestOomKillerRoutes(t *testing.T) {
 func TestNotificationServiceRoutes(t *testing.T) {
 	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
 
-	// Complete Case (all data fields exist)
+	t.Log("Complete Case (all data fields exist)")
 	input := map[string]interface{}{
 		"env": "production",
 		"notification_alert_type": "test_alert",
@@ -77,7 +77,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 	assert.Equal(t, 1, len(routes))
 	assert.Equal(t, routes[0].Message, `@notorious-bot: {"notification_alert_type":"test_alert","app_id":"app__id","district_id":"district__id","value":"314159","data":{"some":"data","with":"meaning"}}`)
 
-	// Simple Case (just an alert type, no other data)
+	t.Log("Simple Case (just an alert type, no other data)")
 	input = map[string]interface{}{
 		"env": "production",
 		"notification_alert_type": "test_alert",
@@ -87,7 +87,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 	assert.Equal(t, 1, len(routes))
 	assert.Equal(t, routes[0].Message, `@notorious-bot: {"notification_alert_type":"test_alert"}`)
 
-	// Works OK if data is just a string.
+	t.Log("Works OK if data is just a string.")
 	input = map[string]interface{}{
 		"env": "production",
 		"notification_alert_type": "test_alert",
@@ -98,7 +98,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 	assert.Equal(t, 1, len(routes))
 	assert.Equal(t, routes[0].Message, `@notorious-bot: {"notification_alert_type":"test_alert","data":"foobar"}`)
 
-	// Works OK if value is an int instead of a string.
+	t.Log("Works OK if value is an int instead of a string.")
 	input = map[string]interface{}{
 		"env": "production",
 		"notification_alert_type": "test_alert",
@@ -109,7 +109,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 	assert.Equal(t, 1, len(routes))
 	assert.Equal(t, routes[0].Message, `@notorious-bot: {"notification_alert_type":"test_alert","value":"3"}`)
 
-	// Works OK if value is a boolean instead of a string.
+	t.Log("Works OK if value is a boolean instead of a string.")
 	input = map[string]interface{}{
 		"env": "production",
 		"notification_alert_type": "test_alert",
@@ -120,7 +120,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 	assert.Equal(t, 1, len(routes))
 	assert.Equal(t, routes[0].Message, `@notorious-bot: {"notification_alert_type":"test_alert","value":"true"}`)
 
-	// Still works OK if value is a boolean hidden inside of a string.
+	t.Log("Still works OK if value is a boolean hidden inside of a string.")
 	input = map[string]interface{}{
 		"env": "production",
 		"notification_alert_type": "test_alert",
@@ -131,7 +131,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 	assert.Equal(t, 1, len(routes))
 	assert.Equal(t, routes[0].Message, `@notorious-bot: {"notification_alert_type":"test_alert","value":"true"}`)
 
-	// Non notification-service
+	t.Log("Non notification-service")
 	input = map[string]interface{}{
 		"env":     "production",
 		"message": "hello, world",
@@ -140,7 +140,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 	routes = sender.oomKillerRoutes(input)
 	assert.Equal(t, 0, len(routes))
 
-	// Non production
+	t.Log("Non production")
 	input = map[string]interface{}{
 		"notification_alert_type": "test_alert",
 		"env": "dev",
@@ -211,7 +211,7 @@ func TestHasNotifications(t *testing.T) {
 func TestEncodeMessage(t *testing.T) {
 	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
 
-	// Nominal case
+	t.Log("Nominal case")
 	log := "slack message goes here"
 	input := map[string]interface{}{
 		"rawlog": log,
@@ -240,7 +240,7 @@ func TestEncodeMessage(t *testing.T) {
 	assert.Equal(t, string(expectedTag), tags[0])
 	assert.Equal(t, "Hello World", string(output))
 
-	// Multiple routes
+	t.Log("Multiple routes")
 	input = map[string]interface{}{
 		"rawlog": log,
 		"_kvmeta": map[string]interface{}{
@@ -281,7 +281,7 @@ func TestEncodeMessage(t *testing.T) {
 	assert.Equal(t, string(expectedTagB), tags[1])
 	assert.Equal(t, "Hello World", string(output))
 
-	// Missing the raw log
+	t.Log("Missing the raw log")
 	input = map[string]interface{}{
 		"_kvmeta.type":    "notifications",
 		"_kvmeta.channel": "#test",
@@ -293,7 +293,7 @@ func TestEncodeMessage(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "intentionally skipped")
 
-	// Not a notification
+	t.Log("Not a notification")
 	input = map[string]interface{}{
 		"rawlog": log,
 		"_kvmeta": map[string]interface{}{
@@ -318,7 +318,7 @@ func TestEncodeMessage(t *testing.T) {
 func TestEncodeMessageMaxSize(t *testing.T) {
 	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
 
-	// Nominal case
+	t.Log("Nominal case")
 	log := "slack message goes here"
 	input := map[string]interface{}{
 		"rawlog": log,
@@ -345,7 +345,7 @@ func TestSendBatch(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	// a fake batch of slack messages
+	t.Log("a fake batch of slack messages")
 	tagA := slackTag{
 		Channel:  "#test",
 		Username: "Tyler",
@@ -369,10 +369,10 @@ func TestSendBatch(t *testing.T) {
 	messagesReceived := 0
 	httpmock.RegisterResponder("POST", mockURL,
 		func(req *http.Request) (*http.Response, error) {
-			// Verify expected headers
+			t.Log("Verify expected headers")
 			assert.Equal(t, "application/json", req.Header["Content-Type"][0])
 
-			// Verify expected JSON body
+			t.Log("Verify expected JSON body")
 			decoder := json.NewDecoder(req.Body)
 			var msg slackMessage
 			err := decoder.Decode(&msg)
@@ -549,14 +549,14 @@ func TestSendBatchError(t *testing.T) {
 		[]byte("Do not pass Go"),
 	}
 
-	// Expect a 500 first (this will be retried)
+	t.Log("Expect a 500 first (this will be retried)")
 	sender := newSlackOutput("test", mockURL, 0, 1, 1, 1)
 	err := sender.SendBatch(batch, string(tag))
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "500")
 	assert.Equal(t, 2, messagesReceived)
 
-	// Expects a 404 (no retries)
+	t.Log("Expects a 404 (no retries)")
 	sender = newSlackOutput("test", mockURL, 0, 1, 1, 3)
 	err = sender.SendBatch(batch, string(tag))
 	assert.Error(t, err)
