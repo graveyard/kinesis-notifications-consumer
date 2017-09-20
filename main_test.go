@@ -98,6 +98,39 @@ func TestNotificationServiceRoutes(t *testing.T) {
 	assert.Equal(t, 1, len(routes))
 	assert.Equal(t, routes[0].Message, `@notorious-bot: {"notification_alert_type":"test_alert","data":"foobar"}`)
 
+	// Works OK if value is an int instead of a string.
+	input = map[string]interface{}{
+		"env": "production",
+		"notification_alert_type": "test_alert",
+		"value":                   3,
+	}
+
+	routes = sender.globalRoutes(input)
+	assert.Equal(t, 1, len(routes))
+	assert.Equal(t, routes[0].Message, `@notorious-bot: {"notification_alert_type":"test_alert","value":"3"}`)
+
+	// Works OK if value is a boolean instead of a string.
+	input = map[string]interface{}{
+		"env": "production",
+		"notification_alert_type": "test_alert",
+		"value":                   true,
+	}
+
+	routes = sender.globalRoutes(input)
+	assert.Equal(t, 1, len(routes))
+	assert.Equal(t, routes[0].Message, `@notorious-bot: {"notification_alert_type":"test_alert","value":"true"}`)
+
+	// Still works OK if value is a boolean hidden inside of a string.
+	input = map[string]interface{}{
+		"env": "production",
+		"notification_alert_type": "test_alert",
+		"value":                   "true",
+	}
+
+	routes = sender.globalRoutes(input)
+	assert.Equal(t, 1, len(routes))
+	assert.Equal(t, routes[0].Message, `@notorious-bot: {"notification_alert_type":"test_alert","value":"true"}`)
+
 	// Non notification-service
 	input = map[string]interface{}{
 		"env":     "production",
