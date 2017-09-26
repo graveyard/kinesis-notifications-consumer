@@ -38,7 +38,6 @@ type slackOutput struct {
 	rateLimiter          *rate.Limiter
 	rateLimitConcurrency int
 	deployEnv            string
-	minTimestamp         time.Time
 	retryLimit           int
 }
 
@@ -278,7 +277,7 @@ func (s *slackOutput) ProcessMessage(rawmsg []byte) (msg []byte, tags []string, 
 	}
 
 	// Parse the log line
-	fields, err := decode.ParseAndEnhance(string(rawmsg), s.deployEnv, false, false, s.minTimestamp)
+	fields, err := decode.ParseAndEnhance(string(rawmsg), s.deployEnv)
 	if err != nil {
 		return nil, []string{}, err
 	}
@@ -317,7 +316,7 @@ func (s *slackOutput) SendBatch(batch [][]byte, tag string) error {
 	return nil
 }
 
-func newSlackOutput(env, slackURL string, minTimestamp, ratelimitConcurrency, timeout, retryLimit int) *slackOutput {
+func newSlackOutput(env, slackURL string, ratelimitConcurrency, timeout, retryLimit int) *slackOutput {
 	parsedURL, err := url.Parse(slackURL)
 	if err != nil {
 		log.Panicf("Malformed slack url: `%s`: %s\n", slackURL, err.Error())
@@ -346,7 +345,6 @@ func newSlackOutput(env, slackURL string, minTimestamp, ratelimitConcurrency, ti
 		rateLimiter:          rate.NewLimiter(rate.Limit(rateLimit), MsgsPerSecond),
 		rateLimitConcurrency: ratelimitConcurrency,
 		deployEnv:            env,
-		minTimestamp:         time.Unix(int64(minTimestamp), 0),
 		retryLimit:           retryLimit,
 	}
 }
@@ -382,7 +380,6 @@ func setupLogRouting() {
 
 func main() {
 	env := getEnv("DEPLOY_ENV")
-	minTimestamp := getIntEnv("MINIMUM_TIMESTAMP")
 	ratelimitConcurrency := getIntEnv("RATELIMIT_CONCURRENCY")
 	timeout := getIntEnv("SLACK_TIMEOUT")
 	retryLimit := getIntEnv("SLACK_RETRY_LIMIT")
@@ -397,7 +394,7 @@ func main() {
 		BatchSize:     MaxMessageLength,
 		ReadRateLimit: getIntEnv("READ_RATE_LIMIT"),
 	}
-	output := newSlackOutput(env, slackURL, minTimestamp, ratelimitConcurrency, timeout, retryLimit)
+	output := newSlackOutput(env, slackURL, ratelimitConcurrency, timeout, retryLimit)
 	consumer := kbc.NewBatchConsumer(config, output)
 	consumer.Start()
 }
