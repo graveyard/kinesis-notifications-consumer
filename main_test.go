@@ -15,7 +15,7 @@ const mockURL = "https://mockery.com/call/me"
 
 // TestOOmKillerRoutes tests that the globalRoutes() helper used in encodeMessage() handles all global slack routes
 func TestOomKillerRoutes(t *testing.T) {
-	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
+	sender := newSlackOutput("test", mockURL, 1, 1, 3)
 
 	t.Log("Nominal Case ( a production oom-killer log)")
 	log := "[14214865.119571] myapp invoked oom-killer: gfp_mask=0x24000c0, order=0, oom_score_adj=0"
@@ -61,7 +61,7 @@ func TestOomKillerRoutes(t *testing.T) {
 
 // TestNotificationServiceRoutes tests that the globalRoutes() helper used in encodeMessage() handles all global slack routes
 func TestNotificationServiceRoutes(t *testing.T) {
-	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
+	sender := newSlackOutput("test", mockURL, 1, 1, 3)
 
 	t.Log("Complete Case (all data fields exist)")
 	input := map[string]interface{}{
@@ -153,7 +153,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 func TestHasNotifications(t *testing.T) {
 	assert := assert.New(t)
 
-	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
+	sender := newSlackOutput("test", mockURL, 1, 1, 3)
 
 	tests := []struct {
 		message          string
@@ -209,7 +209,7 @@ func TestHasNotifications(t *testing.T) {
 
 // TestEncodeMessage tests the encodeMessage() helper used in ProcessMessage()
 func TestEncodeMessage(t *testing.T) {
-	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
+	sender := newSlackOutput("test", mockURL, 1, 1, 3)
 
 	t.Log("Nominal case")
 	log := "slack message goes here"
@@ -316,7 +316,7 @@ func TestEncodeMessage(t *testing.T) {
 // TestEncodeMessageMaxSize tests that encodeMessage() discards messages that
 // are too long
 func TestEncodeMessageMaxSize(t *testing.T) {
-	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
+	sender := newSlackOutput("test", mockURL, 1, 1, 3)
 
 	t.Log("Nominal case")
 	log := "slack message goes here"
@@ -392,7 +392,7 @@ func TestSendBatch(t *testing.T) {
 		},
 	)
 
-	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
+	sender := newSlackOutput("test", mockURL, 1, 1, 3)
 	err := sender.SendBatch(batch, string(encTagA))
 	assert.NoError(t, err)
 	assert.Equal(t, 1, messagesReceived)
@@ -423,7 +423,7 @@ func TestSendBatchRetryLimit(t *testing.T) {
 	batch := [][]byte{
 		[]byte("slack is down"),
 	}
-	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
+	sender := newSlackOutput("test", mockURL, 1, 1, 3)
 	err := sender.SendBatch(batch, string(tag))
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Retry limit")
@@ -456,7 +456,7 @@ func TestSendBatchInternalRateLimit(t *testing.T) {
 	batch := [][]byte{
 		[]byte("Hello Again"),
 	}
-	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
+	sender := newSlackOutput("test", mockURL, 1, 1, 3)
 
 	for x := 0; x < 4; x++ {
 		err := sender.SendBatch(batch, string(tag))
@@ -503,7 +503,7 @@ func TestSendBatchRateLimitResponse(t *testing.T) {
 	batch := [][]byte{
 		[]byte("Hello again"),
 	}
-	sender := newSlackOutput("test", mockURL, 0, 1, 1, 3)
+	sender := newSlackOutput("test", mockURL, 1, 1, 3)
 
 	for x := 0; x < 2; x++ {
 		err := sender.SendBatch(batch, string(tag))
@@ -550,14 +550,14 @@ func TestSendBatchError(t *testing.T) {
 	}
 
 	t.Log("Expect a 500 first (this will be retried)")
-	sender := newSlackOutput("test", mockURL, 0, 1, 1, 1)
+	sender := newSlackOutput("test", mockURL, 1, 1, 1)
 	err := sender.SendBatch(batch, string(tag))
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "500")
 	assert.Equal(t, 2, messagesReceived)
 
 	t.Log("Expects a 404 (no retries)")
-	sender = newSlackOutput("test", mockURL, 0, 1, 1, 3)
+	sender = newSlackOutput("test", mockURL, 1, 1, 3)
 	err = sender.SendBatch(batch, string(tag))
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "404")
