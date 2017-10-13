@@ -382,6 +382,7 @@ func TestSendBatch(t *testing.T) {
 			assert.Equal(t, tagA.Channel, msg.Channel)
 			assert.Equal(t, tagA.Icon, msg.Icon)
 			assert.Equal(t, tagA.Username, msg.Username)
+			assert.Equal(t, "", msg.Parse)
 
 			resp, err := httpmock.NewJsonResponse(200, nil)
 			if err != nil {
@@ -562,4 +563,63 @@ func TestSendBatchError(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "404")
 	assert.Equal(t, 3, messagesReceived)
+}
+
+// TestNotificationSendBatchParse tests that notification-service alerts get sent with parse = none.
+func TestNotificationSendBatchParse(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	t.Log("a fake batch of notification-service messages")
+	tagA := slackTag{
+		Channel:  "#notification-catcher",
+		Username: "notice",
+		Icon:     ":notebook:",
+	}
+	encTagA, _ := json.Marshal(tagA)
+
+	msgs := []string{
+		"mo money mo problems",
+		"learning.com",
+		"#notification-catcher",
+	}
+
+	batch := [][]byte{
+		[]byte(msgs[0]),
+		[]byte(msgs[1]),
+		[]byte(msgs[2]),
+	}
+	expectedMessage := strings.Join(msgs, "\n")
+
+	messagesReceived := 0
+	httpmock.RegisterResponder("POST", mockURL,
+		func(req *http.Request) (*http.Response, error) {
+			t.Log("Verify expected headers")
+			assert.Equal(t, "application/json", req.Header["Content-Type"][0])
+
+			t.Log("Verify expected JSON body")
+			decoder := json.NewDecoder(req.Body)
+			var msg slackMessage
+			err := decoder.Decode(&msg)
+			assert.NoError(t, err)
+
+			assert.Equal(t, expectedMessage, msg.Text)
+			assert.Equal(t, tagA.Channel, msg.Channel)
+			assert.Equal(t, tagA.Icon, msg.Icon)
+			assert.Equal(t, tagA.Username, msg.Username)
+			assert.Equal(t, "none", msg.Parse)
+
+			resp, err := httpmock.NewJsonResponse(200, nil)
+			if err != nil {
+				panic(err) // failure in test mocks
+			}
+			messagesReceived++
+			return resp, nil
+		},
+	)
+
+	sender := newSlackOutput("test", mockURL, 1, 1, 3)
+	err := sender.SendBatch(batch, string(encTagA))
+	assert.NoError(t, err)
+	assert.Equal(t, 1, messagesReceived)
 }
