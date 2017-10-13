@@ -48,7 +48,8 @@ type slackTag struct {
 }
 
 type slackMessage struct {
-	Text string `json:"text"`
+	Text  string `json:"text"`
+	Parse string `json:"parse,omitempty"`
 	slackTag
 }
 
@@ -305,6 +306,12 @@ func (s *slackOutput) SendBatch(batch [][]byte, tag string) error {
 		Text:     strings.Join(messages, "\n"),
 		slackTag: msgTag,
 	}
+
+	// Notification-service alerts should be passed in raw, without slack doing link/ID parsing.
+	if message.Username == "notice" && message.Channel == "#notification-catcher" {
+		message.Parse = "none"
+	}
+
 	err = s.sendMessage(message)
 	if err != nil {
 		return kbc.PartialSendBatchError{
