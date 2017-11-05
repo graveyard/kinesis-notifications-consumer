@@ -1,8 +1,8 @@
 hash: 41e70f2a75c4de557e079d23d25bb2bd3952b8ef9f58de0ec63dda6e3ff79cf5
-updated: 2017-09-26T21:59:16.806494025Z
+updated: 2017-11-05T20:52:07.217375356Z
 imports:
 - name: github.com/Clever/amazon-kinesis-client-go
-  version: 94aacdf8339bd2cc8400d3bcb323dc1bce2c8422
+  version: ebf2e2dc98e47f99f3804851df4d53785554fe99
   subpackages:
   - batchconsumer
   - batchconsumer/stats
@@ -16,28 +16,28 @@ imports:
 - name: github.com/jeromer/syslogparser
   version: 0e4ae46ea3f08de351074b643d649d5d00661a3c
 - name: github.com/kardianos/osext
-  version: c2c54e542fb797ad986b31721e1baedf214ca413
+  version: ae77be60afb1dcacde03767a8c37337fad28ac14
 - name: github.com/xeipuuv/gojsonpointer
   version: 6fe8760cad3569743d51ddbb243b26f8456742dc
 - name: github.com/xeipuuv/gojsonreference
   version: e02fc20de94c78484cd5ffb007f8af96be030a45
 - name: github.com/xeipuuv/gojsonschema
-  version: 702b404897d4364af44dc8dcabc9815947942325
+  version: 212d8a0df7acfab8bdd190a7a69f0ab7376edcc8
 - name: golang.org/x/net
-  version: 5602c733f70afc6dcec6766be0d5034d4c4f14de
+  version: 01c190206fbdffa42f334f4b2bf2220f50e64920
   subpackages:
   - context
 - name: golang.org/x/time
-  version: f51c12702a4d776e4c1fa9b0fabab841babae631
+  version: 6dc17368e09b0e8634d71cac8168d853e869a0c7
   subpackages:
   - rate
 - name: gopkg.in/Clever/kayvee-go.v6
-  version: e6f953eac5b9d8e41dff6587e0ae6d58b50da5c5
+  version: e1e6fd8184162847c1123645e7058347a2fd3959
   subpackages:
   - logger
   - router
 - name: gopkg.in/yaml.v2
-  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
+  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports:
 - name: github.com/davecgh/go-spew
   version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9

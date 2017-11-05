@@ -396,10 +396,10 @@ func main() {
 
 	// Slack doesn't support batching, so set the batch size to 1
 	config := kbc.Config{
-		LogFile:       "/tmp/kinesis-notifications-consumer-" + time.Now().Format(time.RFC3339),
-		BatchCount:    1,
-		BatchSize:     MaxMessageLength,
-		ReadRateLimit: getIntEnv("READ_RATE_LIMIT"),
+		FailedLogsFile: "/tmp/kinesis-notifications-consumer-" + time.Now().Format(time.RFC3339),
+		BatchCount:     1,
+		BatchSize:      MaxMessageLength,
+		ReadRateLimit:  getIntEnv("READ_RATE_LIMIT"),
 	}
 	output := newSlackOutput(env, slackURL, ratelimitConcurrency, timeout, retryLimit)
 	consumer := kbc.NewBatchConsumer(config, output)
