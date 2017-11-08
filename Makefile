@@ -6,7 +6,7 @@ SHELL := /bin/bash
 JAR_DIR := jars
 PKGS = $(shell GO15VENDOREXPERIMENT=1 go list ./... | grep -v "vendor/")
 BINARY_NAME := kinesis-notifications-consumer
-$(eval $(call golang-version-check,1.8))
+$(eval $(call golang-version-check,1.9))
 
 TMP_DIR := /tmp/kinesis-notifications-consumer-jars
 JAR_DIR := ./jars
@@ -40,8 +40,6 @@ download_jars:
 	ls $(JAR_DIR)/aws-java-sdk-core-*.jar | sed -e "s/.*-sdk-core-//g" | sed -e "s/\.jar//g" > /tmp/version.txt
 	curl -o $(JAR_DIR)/aws-java-sdk-sts-`cat /tmp/version.txt`.jar http://central.maven.org/maven2/com/amazonaws/aws-java-sdk-sts/`cat /tmp/version.txt`/aws-java-sdk-sts-`cat /tmp/version.txt`.jar
 
-$(GOPATH)/bin/glide:
-	@go get github.com/Masterminds/glide
 
 all: build test
 
@@ -53,8 +51,6 @@ build:
 # disable CGO and link completely statically (this is to enable us to run in containers that don't use glibc)
 	@CGO_ENABLED=0 go build -a -installsuffix cgo
 
-install_deps: $(GOPATH)/bin/glide
-	@$(GOPATH)/bin/glide install
 
 run:
 	GOOS=linux GOARCH=amd64 make build
@@ -63,3 +59,7 @@ run:
 	-v $(AWS_SHARED_CREDENTIALS_FILE):$(AWS_SHARED_CREDENTIALS_FILE) \
 	--env-file=<(echo -e $(_ARKLOC_ENV_FILE)) \
 	kinesis-notifications-consumer
+
+
+install_deps: golang-dep-vendor-deps
+	$(call golang-dep-vendor)
