@@ -562,7 +562,72 @@ func TestSendBatchError(t *testing.T) {
 	err = sender.SendBatch(batch, string(tag))
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "404")
-	assert.Equal(t, 3, messagesReceived)
+	assert.Equal(t, 4, messagesReceived)
+
+	t.Log("Unknown channels should be skipped")
+	err = sender.SendBatch(batch, string(tag))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Attempted to send message to unknown channel")
+	assert.Equal(t, 4, messagesReceived)
+
+	t.Log("After 2 hours unknown channels shouldn't be ignored")
+	sender.unknownChannels["#monopoly"] = time.Now().Add(-2 * time.Hour)
+	err = sender.SendBatch(batch, string(tag))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "404")
+	assert.Equal(t, 5, messagesReceived)
+}
+
+func TestChannelThrottling(t *testing.T) {
+	assert := assert.New(t)
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	messagesReceived := 0
+	var lastMessage slackMessage
+	httpmock.RegisterResponder("POST", mockURL,
+		func(req *http.Request) (*http.Response, error) {
+			messagesReceived++
+
+			err := json.NewDecoder(req.Body).Decode(&lastMessage)
+			if err != nil {
+				panic(err) // failure in test mocks
+			}
+
+			resp, err := httpmock.NewJsonResponse(200, nil)
+			if err != nil {
+				panic(err) // failure in test mocks
+			}
+			return resp, nil
+		},
+	)
+	tag, _ := json.Marshal(slackTag{
+		Channel:  "#monopoly",
+		Username: "Player1",
+		Icon:     ":top-hat:",
+	})
+	batch := [][]byte{
+		[]byte("Do not pass Go"),
+	}
+
+	sender := newSlackOutput("test", mockURL, 1, 1, 1)
+	for i := 0; i < 4; i++ {
+		err := sender.SendBatch(batch, string(tag))
+		assert.NoError(err)
+		assert.Equal(messagesReceived, i+1)
+		assert.NotContains(lastMessage.Text, "are about to be throttled :sixgod:")
+	}
+
+	err := sender.SendBatch(batch, string(tag))
+	assert.NoError(err)
+	assert.Equal(messagesReceived, 5)
+	assert.Contains(lastMessage.Text, "are about to be throttled :sixgod:")
+
+	err = sender.SendBatch(batch, string(tag))
+	assert.Error(err)
+	assert.Contains(err.Error(), "Message to channel throttled")
+	assert.Equal(messagesReceived, 5)
 }
 
 // TestNotificationSendBatchParse tests that notification-service alerts get sent with parse = none.
