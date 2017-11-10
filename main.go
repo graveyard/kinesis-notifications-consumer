@@ -287,7 +287,7 @@ func (s *slackOutput) sendMessage(msg slackMessage) error {
 			return nil
 		} else if resp.StatusCode == 429 {
 			// Rate limited. Retry after `Retry-After` seconds in the header
-			delayTime := rand.Intn(s.rateLimitConcurrency)
+			delayTime := rand.Intn(s.rateLimitConcurrency) // adding fuzz
 			retry := resp.Header.Get("Retry-After")
 			if retry != "" {
 				sec, err := strconv.Atoi(retry)
