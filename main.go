@@ -337,7 +337,7 @@ func newSlackOutput(env, slackURL string, ratelimitConcurrency, timeout, retryLi
 	// so collectively the consumers the consumers need to be rate limited at
 	// 1 msg per second. The RATELIMIT_CONCURRENCY env var is used to describe
 	// the number of consumers to factor in when rate limiting each one.
-	rateLimit := MsgsPerSecond / ratelimitConcurrency
+	rateLimit := float64(MsgsPerSecond) / float64(ratelimitConcurrency)
 
 	// If the consumers still exceed the rate limit, each one will back off
 	// for the minimum required time + a small randomized time based on
