@@ -39,6 +39,9 @@ type slackOutput struct {
 	rateLimitConcurrency int
 	deployEnv            string
 	retryLimit           int
+
+	channelThottles map[string]channelStats
+	unknownChannels map[string]time.Time
 }
 
 type slackTag struct {
@@ -51,6 +54,11 @@ type slackMessage struct {
 	Text  string `json:"text"`
 	Parse string `json:"parse,omitempty"`
 	slackTag
+}
+
+type channelStats struct {
+	lastSent time.Time
+	msgCount int
 }
 
 func (s *slackOutput) oomKillerRoutes(fields map[string]interface{}) []decode.NotificationRoute {
@@ -190,7 +198,56 @@ func (s *slackOutput) encodeMessage(fields map[string]interface{}) ([]byte, []st
 	return []byte(text), tags, nil
 }
 
+func (s *slackOutput) updateThrottle(channel string) (bool, bool) {
+	stats := s.channelThottles[channel]
+	stats = channelStats{time.Now(), stats.msgCount + 1}
+	s.channelThottles[channel] = stats
+
+	return stats.msgCount > 5, stats.msgCount == 5
+}
+
+func (s *slackOutput) reapTrackedChannels() {
+	toDelete := []string{}
+	for channel, ts := range s.unknownChannels {
+		if time.Since(ts) > time.Hour {
+			toDelete = append(toDelete, channel)
+		}
+	}
+	for _, channel := range toDelete {
+		delete(s.unknownChannels, channel)
+	}
+
+	toDelete = []string{}
+	for channel, stats := range s.channelThottles {
+		if time.Since(stats.lastSent) > 10*time.Minute {
+			toDelete = append(toDelete, channel)
+		} else if time.Since(stats.lastSent) > time.Minute {
+			if stats.msgCount > 10 {
+				stats.msgCount = 11
+			}
+			s.channelThottles[channel] = channelStats{time.Now(), stats.msgCount - 1}
+		}
+	}
+	for _, channel := range toDelete {
+		delete(s.channelThottles, channel)
+	}
+}
+
 func (s *slackOutput) sendMessage(msg slackMessage) error {
+	s.reapTrackedChannels()
+
+	if _, ok := s.unknownChannels[msg.Channel]; ok {
+		return fmt.Errorf("Attempted to send message to unknown channel")
+	}
+
+	isThrottled, isNearlyThrottled := s.updateThrottle(msg.Channel)
+	if isThrottled {
+		return fmt.Errorf("Message to channel throttled")
+	}
+	if isNearlyThrottled {
+		msg.Text += "\nMessages to this channel are about to be throttled :sixgod:"
+	}
+
 	lastError := fmt.Errorf("Unknown error in output")
 
 	// Encode the message to json
@@ -230,7 +287,7 @@ func (s *slackOutput) sendMessage(msg slackMessage) error {
 			return nil
 		} else if resp.StatusCode == 429 {
 			// Rate limited. Retry after `Retry-After` seconds in the header
-			delayTime := rand.Intn(s.rateLimitConcurrency)
+			delayTime := rand.Intn(s.rateLimitConcurrency) // adding fuzz
 			retry := resp.Header.Get("Retry-After")
 			if retry != "" {
 				sec, err := strconv.Atoi(retry)
@@ -244,6 +301,23 @@ func (s *slackOutput) sendMessage(msg slackMessage) error {
 			lg.InfoD("rate-limited-via-slack", logger.M{"delaying": delayTime})
 			time.Sleep(time.Duration(delayTime) * time.Second)
 			lastError = fmt.Errorf("Failed to post slack message: %+v. Error: Exceeded rate limit", msg)
+		} else if resp.StatusCode == 404 {
+			if _, ok := s.unknownChannels[msg.Channel]; !ok {
+				s.unknownChannels[msg.Channel] = time.Now()
+				_ = s.sendMessage(slackMessage{
+					Text: fmt.Sprintf("Unknown channel: %s\n> %s", msg.Channel, msg.Text),
+					slackTag: slackTag{
+						Channel:  "#oncall-infra",
+						Icon:     ":orly:",
+						Username: "kinesis-notification-consumer",
+					},
+				})
+			}
+
+			lg.ErrorD("unknown-channel", logger.M{
+				"status-code": resp.StatusCode, "retry": false, "channel": msg.Channel,
+			})
+			return fmt.Errorf("404 from slack channel: %s", msg.Channel)
 		} else if resp.StatusCode >= 500 && resp.StatusCode < 600 {
 			// A server side error occurred. Retry
 			lg.ErrorD("slack-post-failed", logger.M{"status-code": resp.StatusCode, "retry": true})
@@ -337,7 +411,7 @@ func newSlackOutput(env, slackURL string, ratelimitConcurrency, timeout, retryLi
 	// so collectively the consumers the consumers need to be rate limited at
 	// 1 msg per second. The RATELIMIT_CONCURRENCY env var is used to describe
 	// the number of consumers to factor in when rate limiting each one.
-	rateLimit := MsgsPerSecond / ratelimitConcurrency
+	rateLimit := float64(MsgsPerSecond) / float64(ratelimitConcurrency)
 
 	// If the consumers still exceed the rate limit, each one will back off
 	// for the minimum required time + a small randomized time based on
@@ -353,6 +427,9 @@ func newSlackOutput(env, slackURL string, ratelimitConcurrency, timeout, retryLi
 		rateLimitConcurrency: ratelimitConcurrency,
 		deployEnv:            env,
 		retryLimit:           retryLimit,
+
+		channelThottles: map[string]channelStats{},
+		unknownChannels: map[string]time.Time{},
 	}
 }
 
