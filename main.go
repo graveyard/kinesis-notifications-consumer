@@ -244,8 +244,8 @@ func (s *slackOutput) sendMessage(msg slackMessage) error {
 	if isThrottled {
 		return fmt.Errorf("Message to channel throttled")
 	}
-	if isNearlyThrottled {
-		msg.Text += "\nMessages to this channel are about to be throttled :sixgod:"
+	if isNearlyThrottled { // TODO: maybe link to documentation or #oncall-infra
+		msg.Text += "\nMessages to this channel is being throttled :sixgod:"
 	}
 
 	lastError := fmt.Errorf("Unknown error in output")
@@ -305,7 +305,7 @@ func (s *slackOutput) sendMessage(msg slackMessage) error {
 			if _, ok := s.unknownChannels[msg.Channel]; !ok {
 				s.unknownChannels[msg.Channel] = time.Now()
 				_ = s.sendMessage(slackMessage{
-					Text: fmt.Sprintf("Unknown channel: %s\n> %s", msg.Channel, msg.Text),
+					Text: fmt.Sprintf("Unknown channel: #%s\n> %s", msg.Channel, msg.Text),
 					slackTag: slackTag{
 						Channel:  "#oncall-infra",
 						Icon:     ":orly:",
