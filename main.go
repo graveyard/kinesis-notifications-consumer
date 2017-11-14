@@ -245,7 +245,7 @@ func (s *slackOutput) sendMessage(msg slackMessage) error {
 		return fmt.Errorf("Message to channel throttled")
 	}
 	if isNearlyThrottled { // TODO: maybe link to documentation or #oncall-infra
-		msg.Text += "\nMessages to this channel is being throttled :sixgod:"
+		msg.Text += "\nMessages to this channel are being throttled :sixgod:"
 	}
 
 	lastError := fmt.Errorf("Unknown error in output")
