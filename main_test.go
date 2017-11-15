@@ -616,13 +616,13 @@ func TestChannelThrottling(t *testing.T) {
 		err := sender.SendBatch(batch, string(tag))
 		assert.NoError(err)
 		assert.Equal(messagesReceived, i+1)
-		assert.NotContains(lastMessage.Text, "are about to be throttled :sixgod:")
+		assert.NotContains(lastMessage.Text, "are being throttled :sixgod:")
 	}
 
 	err := sender.SendBatch(batch, string(tag))
 	assert.NoError(err)
 	assert.Equal(messagesReceived, 5)
-	assert.Contains(lastMessage.Text, "are about to be throttled :sixgod:")
+	assert.Contains(lastMessage.Text, "are being throttled :sixgod:")
 
 	err = sender.SendBatch(batch, string(tag))
 	assert.Error(err)
