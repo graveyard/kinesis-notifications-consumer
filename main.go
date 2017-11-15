@@ -398,7 +398,7 @@ func (s *slackOutput) SendBatch(batch [][]byte, tag string) error {
 	return nil
 }
 
-func newSlackOutput(env, slackURL string, ratelimitConcurrency, timeout, retryLimit int) *slackOutput {
+func newSlackOutput(env, slackURL string, ratelimitConcurrency, timeout int) *slackOutput {
 	parsedURL, err := url.Parse(slackURL)
 	if err != nil {
 		log.Panicf("Malformed slack url: `%s`: %s\n", slackURL, err.Error())
@@ -427,8 +427,8 @@ func newSlackOutput(env, slackURL string, ratelimitConcurrency, timeout, retryLi
 		rateLimiter:          rate.NewLimiter(rate.Limit(rateLimit), MsgsPerSecond),
 		rateLimitConcurrency: ratelimitConcurrency,
 		deployEnv:            env,
-		retryLimit:           retryLimit,
-		throttleThreshold:    getIntEnv("THROTTLE_THRESHOLD"),
+		retryLimit:           5,
+		throttleThreshold:    5,
 
 		channelThottles: map[string]channelStats{},
 		unknownChannels: map[string]time.Time{},
@@ -470,6 +470,7 @@ func main() {
 	timeout := getIntEnv("SLACK_TIMEOUT")
 	retryLimit := getIntEnv("SLACK_RETRY_LIMIT")
 	slackURL := getEnv("SLACK_HOOK_URL")
+	throttleThreshold := getIntEnv("THROTTLE_THRESHOLD")
 
 	setupLogRouting()
 
@@ -480,7 +481,11 @@ func main() {
 		BatchSize:      MaxMessageLength,
 		ReadRateLimit:  getIntEnv("READ_RATE_LIMIT"),
 	}
-	output := newSlackOutput(env, slackURL, ratelimitConcurrency, timeout, retryLimit)
+
+	output := newSlackOutput(env, slackURL, ratelimitConcurrency, timeout)
+	output.retryLimit = retryLimit
+	output.throttleThreshold = throttleThreshold
+
 	consumer := kbc.NewBatchConsumer(config, output)
 	consumer.Start()
 }
