@@ -39,6 +39,7 @@ type slackOutput struct {
 	rateLimitConcurrency int
 	deployEnv            string
 	retryLimit           int
+	throttleThreshold    int
 
 	channelThottles map[string]channelStats
 	unknownChannels map[string]time.Time
@@ -203,7 +204,7 @@ func (s *slackOutput) updateThrottle(channel string) (bool, bool) {
 	stats = channelStats{time.Now(), stats.msgCount + 1}
 	s.channelThottles[channel] = stats
 
-	return stats.msgCount > 5, stats.msgCount == 5
+	return stats.msgCount > s.throttleThreshold, stats.msgCount == s.throttleThreshold
 }
 
 func (s *slackOutput) reapTrackedChannels() {
@@ -397,7 +398,7 @@ func (s *slackOutput) SendBatch(batch [][]byte, tag string) error {
 	return nil
 }
 
-func newSlackOutput(env, slackURL string, ratelimitConcurrency, timeout, retryLimit int) *slackOutput {
+func newSlackOutput(env, slackURL string, ratelimitConcurrency, timeout int) *slackOutput {
 	parsedURL, err := url.Parse(slackURL)
 	if err != nil {
 		log.Panicf("Malformed slack url: `%s`: %s\n", slackURL, err.Error())
@@ -426,7 +427,8 @@ func newSlackOutput(env, slackURL string, ratelimitConcurrency, timeout, retryLi
 		rateLimiter:          rate.NewLimiter(rate.Limit(rateLimit), MsgsPerSecond),
 		rateLimitConcurrency: ratelimitConcurrency,
 		deployEnv:            env,
-		retryLimit:           retryLimit,
+		retryLimit:           5,
+		throttleThreshold:    5,
 
 		channelThottles: map[string]channelStats{},
 		unknownChannels: map[string]time.Time{},
@@ -468,6 +470,7 @@ func main() {
 	timeout := getIntEnv("SLACK_TIMEOUT")
 	retryLimit := getIntEnv("SLACK_RETRY_LIMIT")
 	slackURL := getEnv("SLACK_HOOK_URL")
+	throttleThreshold := getIntEnv("THROTTLE_THRESHOLD")
 
 	setupLogRouting()
 
@@ -478,7 +481,11 @@ func main() {
 		BatchSize:      MaxMessageLength,
 		ReadRateLimit:  getIntEnv("READ_RATE_LIMIT"),
 	}
-	output := newSlackOutput(env, slackURL, ratelimitConcurrency, timeout, retryLimit)
+
+	output := newSlackOutput(env, slackURL, ratelimitConcurrency, timeout)
+	output.retryLimit = retryLimit
+	output.throttleThreshold = throttleThreshold
+
 	consumer := kbc.NewBatchConsumer(config, output)
 	consumer.Start()
 }
