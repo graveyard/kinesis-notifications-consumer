@@ -39,6 +39,7 @@ type slackOutput struct {
 	rateLimitConcurrency int
 	deployEnv            string
 	retryLimit           int
+	throttleThreshold    int
 
 	channelThottles map[string]channelStats
 	unknownChannels map[string]time.Time
@@ -203,7 +204,7 @@ func (s *slackOutput) updateThrottle(channel string) (bool, bool) {
 	stats = channelStats{time.Now(), stats.msgCount + 1}
 	s.channelThottles[channel] = stats
 
-	return stats.msgCount > 5, stats.msgCount == 5
+	return stats.msgCount > s.throttleThreshold, stats.msgCount == s.throttleThreshold
 }
 
 func (s *slackOutput) reapTrackedChannels() {
@@ -427,6 +428,7 @@ func newSlackOutput(env, slackURL string, ratelimitConcurrency, timeout, retryLi
 		rateLimitConcurrency: ratelimitConcurrency,
 		deployEnv:            env,
 		retryLimit:           retryLimit,
+		throttleThreshold:    getIntEnv("THROTTLE_THRESHOLD"),
 
 		channelThottles: map[string]channelStats{},
 		unknownChannels: map[string]time.Time{},

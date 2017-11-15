@@ -11,12 +11,13 @@ env:
   - SLACK_RETRY_LIMIT
   - SLACK_TIMEOUT
   - READ_RATE_LIMIT
+  - THROTTLE_THRESHOLD
 resources:
   cpu: 0.1
   soft_mem_limit: 0.5
   max_mem: 2
 shepherds:
-- "ryan.burns@clever.com"
+- "xavi.ramirez@clever.com"
 expose: []
 team: "eng-infra"
 use_iam_roles: true
