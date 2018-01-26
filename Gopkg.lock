@@ -5,7 +5,7 @@
   branch = "master"
   name = "github.com/Clever/amazon-kinesis-client-go"
   packages = ["batchconsumer","batchconsumer/stats","decode","kcl","splitter"]
-  revision = "ebf2e2dc98e47f99f3804851df4d53785554fe99"
+  revision = "bfe2ac0f6de9baa5c97f10dca0d85b99aa198dc2"
 
 [[projects]]
   branch = "master"

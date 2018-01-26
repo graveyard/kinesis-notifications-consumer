@@ -12,3 +12,4 @@ kinesis-notifications-consumer
 vendor/
 jars/
 consumer.properties
+bin/
