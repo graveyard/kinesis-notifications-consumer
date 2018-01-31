@@ -13,3 +13,4 @@ vendor/
 jars/
 consumer.properties
 bin/
+tmp-jars/
