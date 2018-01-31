@@ -1,4 +1,4 @@
-FROM openjdk:7-jre
+FROM openjdk:8-jre
 
 # install `make`
 RUN apt-get -y update && apt-get install -y -q build-essential
