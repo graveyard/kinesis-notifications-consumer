@@ -20,4 +20,13 @@ shepherds:
 - "xavi.ramirez@clever.com"
 expose: []
 team: "eng-infra"
-use_iam_roles: true
+aws:
+  dynamodb:
+    read:
+    - kinesis-notifications-consumer
+    write:
+    - kinesis-notifications-consumer
+  managed:
+    clever:
+    - CloudWatchMetricsWriter
+    - KinesisLogsConsumer
