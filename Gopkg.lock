@@ -5,7 +5,7 @@
   branch = "master"
   name = "github.com/Clever/amazon-kinesis-client-go"
   packages = ["batchconsumer","batchconsumer/stats","decode","kcl","splitter"]
-  revision = "bfe2ac0f6de9baa5c97f10dca0d85b99aa198dc2"
+  revision = "3ded2fcd2deeaf3136090982f18f8de0a99f3c3e"
 
 [[projects]]
   branch = "master"
@@ -91,6 +91,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c64548f1621a2d77c593bf2b0e99812c79de77c9634f4f232aa67a5bf2410898"
+  inputs-digest = "8bc09a4e6863cb3f31afd3ced3e1cca213d6ab013b40dd860b96ea197370c867"
   solver-name = "gps-cdcl"
   solver-version = 1
