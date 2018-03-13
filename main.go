@@ -45,16 +45,12 @@ type slackOutput struct {
 	unknownChannels map[string]time.Time
 }
 
-type slackTag struct {
+type slackMessage struct {
+	Parse    string `json:"parse,omitempty"`
 	Channel  string `json:"channel"`
 	Icon     string `json:"icon_emoji,omitempty"`
 	Username string `json:"username,omitempty"`
-}
-
-type slackMessage struct {
-	Text  string `json:"text"`
-	Parse string `json:"parse,omitempty"`
-	slackTag
+	Text     string `json:"text"`
 }
 
 type channelStats struct {
@@ -173,30 +169,27 @@ func (s *slackOutput) encodeMessage(fields map[string]interface{}) ([]byte, []st
 
 	// Assemble tags and message. This assumes that the only variability in the routes
 	// are the channel, user, and icon
-	tags := []string{}
-	var text string
+	messages := []slackMessage{}
 	for _, route := range routes {
-		// Last message wins (they should all be the same)
-		text = route.Message
+		// Make sure individual messages are not too long
+		if len(route.Message) > MaxMessageLength {
+			return nil, nil, fmt.Errorf("Exceeds max-length allowed by slack: %s", route.Message)
+		}
 
-		// Tag each message by channel, user, and icon
-		encTag, err := json.Marshal(slackTag{
+		messages = append(messages, slackMessage{
 			Channel:  route.Channel,
 			Username: route.User,
 			Icon:     route.Icon,
+			Text:     route.Message,
 		})
-		if err != nil {
-			return nil, nil, err
-		}
-		tags = append(tags, string(encTag))
 	}
 
-	// Make sure individual messages are not too long
-	if len(text) > MaxMessageLength {
-		return nil, nil, fmt.Errorf("Message length exceeds maximum length allowed by slack: %s", text)
+	encodedMsgs, err := json.Marshal(messages)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	return []byte(text), tags, nil
+	return encodedMsgs, []string{"all"}, nil
 }
 
 func (s *slackOutput) updateThrottle(channel string) (bool, bool) {
@@ -306,12 +299,10 @@ func (s *slackOutput) sendMessage(msg slackMessage) error {
 			if _, ok := s.unknownChannels[msg.Channel]; !ok {
 				s.unknownChannels[msg.Channel] = time.Now()
 				_ = s.sendMessage(slackMessage{
-					Text: fmt.Sprintf("Unknown channel: #%s\n> %s", msg.Channel, msg.Text),
-					slackTag: slackTag{
-						Channel:  "#oncall-infra",
-						Icon:     ":orly:",
-						Username: "kinesis-notification-consumer",
-					},
+					Text:     fmt.Sprintf("Unknown channel: %s\n> %s", msg.Channel, msg.Text),
+					Channel:  "#oncall-infra",
+					Icon:     ":orly:",
+					Username: "kinesis-notification-consumer",
 				})
 			}
 
@@ -363,35 +354,26 @@ func (s *slackOutput) ProcessMessage(rawmsg []byte) (msg []byte, tags []string, 
 
 // SendBatch is called once per batch per tag and delivers the message to slack
 func (s *slackOutput) SendBatch(batch [][]byte, tag string) error {
-	// Decode the tag
-	msgTag := slackTag{}
-	err := json.Unmarshal([]byte(tag), &msgTag)
-	if err != nil {
-		return fmt.Errorf("Failed to decode message tag '%s': %s", tag, err.Error())
-	}
-
-	// Messages are batched by channel,user, & icon so just send one slack message
-	// per batch with each message on a new line
-	// limit total message length by size
-	messages := []string{}
+	messages := []slackMessage{}
 	for _, b := range batch {
-		messages = append(messages, string(b))
-	}
-	message := slackMessage{
-		Text:     strings.Join(messages, "\n"),
-		slackTag: msgTag,
+		var msgs []slackMessage
+		err := json.Unmarshal(b, &msgs)
+		if err != nil {
+			return fmt.Errorf("Failed to decode batch message '%s': %s", b, err.Error())
+		}
+
+		messages = append(messages, msgs...)
 	}
 
-	// Notification-service alerts should be passed in raw, without slack doing link/ID parsing.
-	if message.Username == "notice" && message.Channel == "#notification-catcher" {
-		message.Parse = "none"
-	}
+	for _, msg := range messages {
+		// Notification-service alerts should be passed in raw, without slack doing link/ID parsing.
+		if msg.Username == "notice" && msg.Channel == "#notification-catcher" {
+			msg.Parse = "none"
+		}
 
-	err = s.sendMessage(message)
-	if err != nil {
-		return kbc.PartialSendBatchError{
-			FailedMessages: batch,
-			ErrMessage:     err.Error(),
+		err := s.sendMessage(msg)
+		if err != nil {
+			return kbc.PartialSendBatchError{FailedMessages: batch, ErrMessage: err.Error()}
 		}
 	}
 
