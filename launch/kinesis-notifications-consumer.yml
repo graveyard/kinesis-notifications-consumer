@@ -14,7 +14,7 @@ env:
   - THROTTLE_THRESHOLD
 resources:
   cpu: 0.1
-  soft_mem_limit: 0.5
+  soft_mem_limit: 1
   max_mem: 2
 shepherds:
 - "xavi.ramirez@clever.com"
