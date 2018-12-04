@@ -17,7 +17,9 @@ jobs:
         command: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
         name: Set up CircleCI artifacts directories
     - run:
-        command: sudo apt-get install -y maven
+        command: |-
+          sudo apt-get -y update
+          sudo apt-get install -y maven
         name: Install maven
     - run: make install_deps
     - run: make build
