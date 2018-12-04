@@ -18,7 +18,7 @@ jobs:
         name: Set up CircleCI artifacts directories
     - run:
         command: sudo apt-get install -y maven
-        name: Instsall maven
+        name: Install maven
     - run: make install_deps
     - run: make build
     - run: make download_jars
