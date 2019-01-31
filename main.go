@@ -329,10 +329,9 @@ var _kvmeta = []byte("_kvmeta")
 var _notifications = []byte("notifications")
 var _oomkill = []byte("oom-killer")
 var _notification_alert_type = []byte("notification_alert_type")
-var _kinesis_log = []byte("from subprocess")
 
 func (s *slackOutput) hasNotifications(rawmsg []byte) bool {
-	return (bytes.Contains(rawmsg, _kvmeta) && bytes.Contains(rawmsg, _notifications) && !bytes.Contains(rawmsg, _kinesis_log)) ||
+	return (bytes.Contains(rawmsg, _kvmeta) && bytes.Contains(rawmsg, _notifications)) ||
 		bytes.Contains(rawmsg, _oomkill) || bytes.Contains(rawmsg, _notification_alert_type)
 }
 

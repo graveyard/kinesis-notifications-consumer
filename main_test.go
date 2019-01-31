@@ -200,15 +200,6 @@ func TestHasNotifications(t *testing.T) {
 				`"team":"eng-infra"}}`,
 			hasNotifications: true,
 		},
-		{
-			message: `SEVERE: Received error line from subprocess {"_kvmeta":` +
-				`{routes":[{"channel":"#deploys","icon":":catapult:","message":` +
-				`"hi","rule":"prod-app-scaling","type":"notifications","user":"catapult"},` +
-				`{"channel":"#multi-notify-message","icon":":catapult:","message":"hi",` +
-				`"rule":"prod-app-scaling","type":"notifications","user":"catapult"}],` +
-				`"team":"eng-infra"}}`,
-			hasNotifications: false,
-		},
 	}
 
 	for _, test := range tests {
