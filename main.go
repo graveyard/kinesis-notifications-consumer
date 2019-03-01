@@ -58,6 +58,8 @@ type channelStats struct {
 	msgCount int
 }
 
+func (s *slackOutput) Initialize(shardID string) {}
+
 func (s *slackOutput) oomKillerRoutes(fields map[string]interface{}) []decode.NotificationRoute {
 	// All Production OOM killed messages go to slack
 	content, ok := fields["rawlog"]
