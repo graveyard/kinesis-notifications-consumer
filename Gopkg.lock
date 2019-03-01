@@ -4,8 +4,14 @@
 [[projects]]
   branch = "master"
   name = "github.com/Clever/amazon-kinesis-client-go"
-  packages = ["batchconsumer","batchconsumer/stats","decode","kcl","splitter"]
-  revision = "3ded2fcd2deeaf3136090982f18f8de0a99f3c3e"
+  packages = [
+    "batchconsumer",
+    "batchconsumer/stats",
+    "decode",
+    "kcl",
+    "splitter"
+  ]
+  revision = "ebbd9e7a377eba17f085187f0f708ecb9b7a17de"
 
 [[projects]]
   branch = "master"
@@ -78,7 +84,11 @@
 
 [[projects]]
   name = "gopkg.in/Clever/kayvee-go.v6"
-  packages = [".","logger","router"]
+  packages = [
+    ".",
+    "logger",
+    "router"
+  ]
   revision = "e1e6fd8184162847c1123645e7058347a2fd3959"
   version = "v6.10.0"
 
