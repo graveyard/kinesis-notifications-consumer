@@ -13,7 +13,7 @@ env:
   - READ_RATE_LIMIT
   - THROTTLE_THRESHOLD
 resources:
-  cpu: 0.5
+  cpu: 0.2
   soft_mem_limit: 1
   max_mem: 2
 shepherds:

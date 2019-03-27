@@ -10,7 +10,7 @@ $(eval $(call golang-version-check,1.10))
 
 TMP_DIR := /tmp/kinesis-notifications-consumer-jars
 JAR_DIR := ./jars
-KCL_VERSION := 2.1.3
+KCL_VERSION := 1.8.10
 
 define POM_XML_FOR_GETTING_DEPENDENT_JARS
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -21,8 +21,8 @@ define POM_XML_FOR_GETTING_DEPENDENT_JARS
   <version>1.0-SNAPSHOT</version>
   <dependencies>
     <dependency>
-      <groupId>software.amazon.kinesis</groupId>
-      <artifactId>amazon-kinesis-client-multilang</artifactId>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>amazon-kinesis-client</artifactId>
       <version>$(KCL_VERSION)</version>
     </dependency>
   </dependencies>
