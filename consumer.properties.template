@@ -45,7 +45,7 @@ regionName = <REGION_NAME>
 #shardSyncIntervalMillis = 60000
 
 # Max records to fetch from Kinesis in a single GetRecords call.
-#maxRecords = 10000
+maxRecords = 10000
 
 # Idle time between record reads in milliseconds.
 #idleTimeBetweenReadsInMillis = 1000
