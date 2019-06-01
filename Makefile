@@ -6,7 +6,7 @@ SHELL := /bin/bash
 JAR_DIR := jars
 PKGS = $(shell GO15VENDOREXPERIMENT=1 go list ./... | grep -v "vendor/")
 BINARY_NAME := kinesis-notifications-consumer
-$(eval $(call golang-version-check,1.10))
+$(eval $(call golang-version-check,1.12))
 
 TMP_DIR := /tmp/kinesis-notifications-consumer-jars
 JAR_DIR := ./jars
