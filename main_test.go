@@ -67,7 +67,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 
 	t.Log("Complete Case (all data fields exist)")
 	input := map[string]interface{}{
-		"env": "production",
+		"env":                     "production",
 		"notification_alert_type": "test_alert",
 		"app_id":                  "app__id",
 		"district_id":             "district__id",
@@ -81,7 +81,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 
 	t.Log("Simple Case (just an alert type, no other data)")
 	input = map[string]interface{}{
-		"env": "production",
+		"env":                     "production",
 		"notification_alert_type": "test_alert",
 	}
 
@@ -91,9 +91,9 @@ func TestNotificationServiceRoutes(t *testing.T) {
 
 	t.Log("Works OK if data is just a string.")
 	input = map[string]interface{}{
-		"env": "production",
+		"env":                     "production",
 		"notification_alert_type": "test_alert",
-		"data": "foobar",
+		"data":                    "foobar",
 	}
 
 	routes = sender.globalRoutes(input)
@@ -102,7 +102,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 
 	t.Log("Works OK if value is an int instead of a string.")
 	input = map[string]interface{}{
-		"env": "production",
+		"env":                     "production",
 		"notification_alert_type": "test_alert",
 		"value":                   3,
 	}
@@ -113,7 +113,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 
 	t.Log("Works OK if value is a boolean instead of a string.")
 	input = map[string]interface{}{
-		"env": "production",
+		"env":                     "production",
 		"notification_alert_type": "test_alert",
 		"value":                   true,
 	}
@@ -124,7 +124,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 
 	t.Log("Still works OK if value is a boolean hidden inside of a string.")
 	input = map[string]interface{}{
-		"env": "production",
+		"env":                     "production",
 		"notification_alert_type": "test_alert",
 		"value":                   "true",
 	}
@@ -145,7 +145,7 @@ func TestNotificationServiceRoutes(t *testing.T) {
 	t.Log("Non production")
 	input = map[string]interface{}{
 		"notification_alert_type": "test_alert",
-		"env": "dev",
+		"env":                     "dev",
 	}
 
 	routes = sender.oomKillerRoutes(input)
